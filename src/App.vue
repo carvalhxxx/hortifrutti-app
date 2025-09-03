@@ -1,26 +1,120 @@
 <template>
   <div id="app">
-    <listaProdutos />
+    <div class="container">
+      
+      <!-- Menu lateral -->
+      <nav :class="['menu-lateral', { fechado: !menuAberto }]">
+        <button class="toggle-btn" @click="menuAberto = !menuAberto">
+          ☰
+        </button>
+        <ul v-if="menuAberto">
+          <li>
+            <router-link to="/produtos" class="menu-link" active-class="ativo">
+              <HomeIcon class="icon" /> Produtos
+            </router-link>
+          </li>
+          <li>
+            <router-link to="/pedidos" class="menu-link" active-class="ativo">
+              <ShoppingCartIcon class="icon" /> Pedidos
+            </router-link>
+          </li>
+          <li>
+            <router-link to="/clientes" class="menu-link" active-class="ativo">
+              <UserGroupIcon class="icon" />Clientes
+            </router-link>
+          </li>
+        </ul>
+      </nav>
+
+      <!-- Área principal -->
+      <main class="conteudo">
+        <router-view></router-view>
+      </main>
+    </div>
   </div>
 </template>
 
+
 <script>
-import ListaProdutos from './components/listaProdutos.vue'
+import { HomeIcon, ShoppingCartIcon } from '@heroicons/vue/24/outline'
 
 export default {
-  components: {
-    ListaProdutos
+  name: 'App',
+  components: { HomeIcon, ShoppingCartIcon },
+  data() {
+    return {
+      menuAberto: true // controla se o menu está aberto ou fechado
+    }
   }
 }
 </script>
 
+
 <style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
+.container {
+  display: flex;
+  height: 100vh;
+}
+
+/* Menu lateral */
+.menu-lateral {
+  width: 220px;
+  background-color: #2c3e50;
+  color: white;
+  padding: 20px;
+  transition: width 0.3s;
+  position: relative;
+}
+.menu-lateral.fechado {
+  width: 50px; /* só ícone visível */
+}
+.toggle-btn {
+  position: absolute;
+  top: 10px;
+  right: -25px;
+  background-color: #1abc9c;
+  border: none;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 5px;
+}
+
+.menu-lateral ul {
+  list-style: none;
+  padding: 0;
+  margin-top: 40px;
+}
+.menu-lateral li {
+  margin-bottom: 15px;
+}
+.menu-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 5px;
+  transition: background 0.2s;
+}
+.menu-link:hover {
+  background-color: #34495e;
+}
+.menu-link.ativo {
+  background-color: #1abc9c;
+  font-weight: bold;
+}
+.icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* Conteúdo principal */
+.conteudo {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
 }
 </style>
