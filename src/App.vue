@@ -4,24 +4,30 @@
       
       <!-- Menu lateral -->
       <nav :class="['menu-lateral', { fechado: !menuAberto }]">
-        <button class="toggle-btn" @click="menuAberto = !menuAberto">
-          ☰
-        </button>
+        <button class="toggle-btn" @click="menuAberto = !menuAberto">☰</button>
         <ul v-if="menuAberto">
           <li>
             <router-link to="/produtos" class="menu-link" active-class="ativo">
-              <HomeIcon class="icon" /> Produtos
+              Produtos
             </router-link>
           </li>
           <li>
             <router-link to="/pedidos" class="menu-link" active-class="ativo">
-              <ShoppingCartIcon class="icon" /> Pedidos
+              Pedidos
             </router-link>
           </li>
           <li>
             <router-link to="/clientes" class="menu-link" active-class="ativo">
-              <UserGroupIcon class="icon" />Clientes
+              Clientes
             </router-link>
+          </li>
+          <li>
+            <router-link to="/motoristas" class="menu-link" active-class="ativo">
+              Motoristas
+            </router-link>
+          </li>
+          <li>
+            <button @click="logout" class="menu-link">Sair</button>
           </li>
         </ul>
       </nav>
@@ -34,21 +40,24 @@
   </div>
 </template>
 
-
 <script>
-import { HomeIcon, ShoppingCartIcon } from '@heroicons/vue/24/outline'
+import { supabase } from "./supabase.js"
 
 export default {
   name: 'App',
-  components: { HomeIcon, ShoppingCartIcon },
   data() {
     return {
-      menuAberto: true // controla se o menu está aberto ou fechado
+      menuAberto: true
+    }
+  },
+  methods: {
+    async logout() {
+      await supabase.auth.signOut()
+      this.$router.push("/login")
     }
   }
 }
 </script>
-
 
 <style>
 .container {
@@ -79,7 +88,6 @@ export default {
   cursor: pointer;
   padding: 5px;
 }
-
 .menu-lateral ul {
   list-style: none;
   padding: 0;
@@ -105,10 +113,6 @@ export default {
 .menu-link.ativo {
   background-color: #1abc9c;
   font-weight: bold;
-}
-.icon {
-  width: 20px;
-  height: 20px;
 }
 
 /* Conteúdo principal */
