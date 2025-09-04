@@ -1,141 +1,67 @@
 <template>
   <div>
-    <h1>Administração de Clientes</h1>
+    <h2>Cadastro de Clientes</h2>
+    <form @submit.prevent="salvarCliente">
+      <input v-model="cliente.nome" placeholder="Nome do cliente" required />
 
-    <!-- Botão para abrir formulário -->
-    <button @click="showForm = true">Adicionar Cliente</button>
+      <input v-model="cliente.cnpj" placeholder="CNPJ" />
 
-    <!-- Formulário modal -->
-    <div v-if="showForm" class="modal">
-      <form @submit.prevent="salvarCliente">
-        <input type="text" v-model="clienteForm.nome" placeholder="Nome" required />
-        <input type="text" v-model="clienteForm.contato" placeholder="Telefone ou email" />
-        <input type="text" v-model="clienteForm.endereco" placeholder="Endereço" />
-        
-        <button type="submit">{{ clienteForm.id ? 'Atualizar' : 'Adicionar' }}</button>
-        <button type="button" @click="cancelarEdicao">Cancelar</button>
-      </form>
-    </div>
+      <input v-model="cliente.telefone" placeholder="Telefone" />
 
-    <!-- Lista de clientes -->
-    <ul>
-      <li v-for="cliente in clientes" :key="cliente.id">
-        {{ cliente.nome }} - {{ cliente.contato }} - {{ cliente.endereco }}
-        <button @click="editarCliente(cliente)">Editar</button>
-        <button @click="excluirCliente(cliente.id)">Excluir</button>
-      </li>
-    </ul>
+      <input v-model="cliente.endereco" placeholder="Endereço" />
+
+      <button type="submit">Salvar</button>
+    </form>
+
+    <h3>Lista de Clientes</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>CNPJ</th>
+          <th>Telefone</th>
+          <th>Endereço</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="c in clientes" :key="c.id">
+          <td>{{ c.nome }}</td>
+          <td>{{ c.cnpj }}</td>
+          <td>{{ c.telefone }}</td>
+          <td>{{ c.endereco }}</td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 </template>
 
-<script>
-import { supabase } from '../supabase.js'
+<script setup>
+import { ref, onMounted } from 'vue'
+import { supabase } from '../supabase'
 
-export default {
-  name: 'clientesAdmin',
-  data() {
-    return {
-      clientes: [],
-      clienteForm: {
-        id: null,
-        nome: '',
-        contato: '',
-        endereco: ''
-      },
-      showForm: false,
-      loading: false,
-      error: null
-    }
-  },
-  async created() {
-    await this.buscarClientes()
-  },
-  methods: {
-    async buscarClientes() {
-      this.loading = true
-      const { data, error } = await supabase.from('clientes').select('*').order('nome')
-      if (error) {
-        console.error(error)
-        this.error = 'Erro ao carregar clientes'
-      } else {
-        this.clientes = data
-      }
-      this.loading = false
-    },
+const cliente = ref({
+  nome: '',
+  cnpj: '',
+  telefone: '',
+  endereco: ''
+})
 
-    async salvarCliente() {
-      if (this.clienteForm.id) {
-        // Atualizar cliente
-        const { error } = await supabase
-          .from('clientes')
-          .update({
-            nome: this.clienteForm.nome,
-            contato: this.clienteForm.contato,
-            endereco: this.clienteForm.endereco
-          })
-          .eq('id', this.clienteForm.id)
-        if (error) return alert('Erro ao atualizar cliente: ' + error.message)
-      } else {
-        // Adicionar cliente
-        const { error } = await supabase
-          .from('clientes')
-          .insert([{
-            nome: this.clienteForm.nome,
-            contato: this.clienteForm.contato,
-            endereco: this.clienteForm.endereco
-          }])
-        if (error) return alert('Erro ao adicionar cliente: ' + error.message)
-      }
+const clientes = ref([])
 
-      this.clienteForm = { id: null, nome: '', contato: '', endereco: '' }
-      this.showForm = false
-      await this.buscarClientes()
-    },
+const carregarClientes = async () => {
+  let { data, error } = await supabase.from('clientes').select('*')
+  if (!error) clientes.value = data
+}
 
-    editarCliente(cliente) {
-      this.clienteForm = { ...cliente }
-      this.showForm = true
-    },
-
-    cancelarEdicao() {
-      this.clienteForm = { id: null, nome: '', contato: '', endereco: '' }
-      this.showForm = false
-    },
-
-    async excluirCliente(id) {
-      if (!confirm('Deseja realmente excluir este cliente?')) return
-      const { error } = await supabase.from('clientes').delete().eq('id', id)
-      if (error) return alert('Erro ao excluir cliente: ' + error.message)
-      await this.buscarClientes()
-    }
+const salvarCliente = async () => {
+  let { error } = await supabase.from('clientes').insert([cliente.value])
+  if (!error) {
+    await carregarClientes()
+    cliente.value = { nome: '', cnpj: '', telefone: '', endereco: '' }
   }
 }
-</script>
 
-<style scoped>
-ul {
-  list-style: none;
-  padding: 0;
-}
-li {
-  margin: 10px 0;
-}
-input {
-  margin-right: 5px;
-  margin-bottom: 5px;
-}
-button {
-  margin-left: 5px;
-}
-.modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: white;
-  padding: 20px;
-  border-radius: 6px;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-  z-index: 1000;
-}
-</style>
+onMounted(() => {
+  carregarClientes()
+})
+</script>
