@@ -7,7 +7,7 @@
         <button class="toggle-btn" @click="menuAberto = !menuAberto">☰</button>
         <ul v-if="menuAberto">
           <li>
-            <router-link to="/produtos" class="menu-link" active-class="ativo">
+            <router-link to="/produtos/lista" class="menu-link" active-class="ativo">
               Produtos
             </router-link>
           </li>
@@ -24,6 +24,11 @@
           <li>
             <router-link to="/motoristas" class="menu-link" active-class="ativo">
               Motoristas
+            </router-link>
+          </li>
+          <li>
+            <router-link to="/rotas" class="menu-link" active-class="ativo">
+              Rotas
             </router-link>
           </li>
           <li>
@@ -70,32 +75,40 @@ export default {
   width: 220px;
   background-color: #2c3e50;
   color: white;
-  padding: 20px;
+  padding: 20px 10px 20px 20px; /* espaço extra à esquerda */
   transition: width 0.3s;
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
+
 .menu-lateral.fechado {
-  width: 50px; /* só ícone visível */
+  width: 100px; /* só ícone visível */
 }
+
 .toggle-btn {
-  position: absolute;
-  top: 10px;
-  right: -25px;
   background-color: #1abc9c;
   border: none;
   color: white;
   border-radius: 4px;
   cursor: pointer;
-  padding: 5px;
+  padding: 8px;
+  font-size: 18px;
+  margin-bottom: 20px;
+  align-self: flex-start;
 }
+
 .menu-lateral ul {
   list-style: none;
   padding: 0;
-  margin-top: 40px;
+  margin: 0;
+  flex: 1;
 }
+
 .menu-lateral li {
   margin-bottom: 15px;
 }
+
 .menu-link {
   display: flex;
   align-items: center;
@@ -107,9 +120,11 @@ export default {
   border-radius: 5px;
   transition: background 0.2s;
 }
+
 .menu-link:hover {
   background-color: #34495e;
 }
+
 .menu-link.ativo {
   background-color: #1abc9c;
   font-weight: bold;

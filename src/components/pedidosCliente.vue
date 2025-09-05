@@ -1,44 +1,51 @@
 <template>
-  <div>
-    <h1>Pedidos</h1>
+  <div class="app-container">
+    <!-- Header -->
+    <div class="produtos-header">
+      <h1>Pedidos</h1>
+      <button @click="$router.push({ name: 'pedidosForm' })">Novo Pedido</button>
+    </div>
 
     <!-- Filtros -->
     <h3>Filtrar Pedidos</h3>
-    <div class="filtros">
-      <label>Cliente:</label>
-      <input type="text" v-model="filtroClienteNome" placeholder="Pesquisar cliente..." />
+    <form class="filtros">
+      <div>
+        <label>Cliente:</label>
+        <input type="text" v-model="filtroClienteNome" placeholder="Pesquisar cliente..." />
+      </div>
 
-      <label>Status:</label>
-      <select v-model="filtroStatus">
-        <option value="">Todos</option>
-        <option v-for="s in statusDisponiveis" :key="s" :value="s">{{ s }}</option>
-      </select>
+      <div>
+        <label>Status:</label>
+        <select v-model="filtroStatus">
+          <option value="">Todos</option>
+          <option v-for="s in statusDisponiveis" :key="s" :value="s">{{ s }}</option>
+        </select>
+      </div>
 
-      <label>Data Inicial:</label>
-      <input type="date" v-model="filtroDataInicio" />
+      <div>
+        <label>Data Inicial:</label>
+        <input type="date" v-model="filtroDataInicio" />
+      </div>
 
-      <label>Data Final:</label>
-      <input type="date" v-model="filtroDataFim" />
-    </div>
-
-    <!-- Botão Novo Pedido -->
-    <button @click="$router.push({ name: 'pedidosForm' })" style="margin-bottom:15px;">
-      Novo Pedido
-    </button>
+      <div>
+        <label>Data Final:</label>
+        <input type="date" v-model="filtroDataFim" />
+      </div>
+    </form>
 
     <!-- Lista de pedidos -->
     <h2>Pedidos existentes</h2>
-    <ul>
-      <li v-for="pedido in pedidosFiltrados" :key="pedido.id">
-        Cliente: {{ obterNomeCliente(pedido.id_cliente) }} -
-        Status: {{ pedido.status }} -
-        Total: R$ {{ formatarPreco(pedido.valor_total) }} -
-        Itens: {{ pedido.itens.length }}
+    <div class="lista-grid">
+      <div v-for="pedido in pedidosFiltrados" :key="pedido.id" class="card-item">
+        <p><strong>Cliente:</strong> {{ obterNomeCliente(pedido.id_cliente) }}</p>
+        <p><strong>Status:</strong> {{ pedido.status }}</p>
+        <p><strong>Total:</strong> {{ formatarPreco(pedido.valor_total) }}</p>
+        <p><strong>Itens:</strong> {{ pedido.itens.length }}</p>
         <button @click="$router.push({ name: 'pedidosForm', params: { id: pedido.id } })">
           Editar
         </button>
-      </li>
-    </ul>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -104,21 +111,80 @@ export default {
 </script>
 
 <style scoped>
+/* Grid para filtros */
 .filtros {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 15px;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
 }
+
 .filtros label {
-  margin-right: 5px;
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 600;
 }
-.filtros input, .filtros select {
-  padding: 3px 5px;
+
+.filtros input,
+.filtros select {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  transition: border 0.2s;
 }
-button {
-  padding: 5px 10px;
+
+.filtros input:focus,
+.filtros select:focus {
+  border-color: #1abc9c;
+  outline: none;
+}
+
+/* Grid de pedidos */
+.lista-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+/* Card de pedido */
+.card-item {
+  background-color: #fff;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card-item p {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* Botão dentro do card */
+.card-item button {
+  width: 100px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 6px;
   cursor: pointer;
+  transition: background 0.2s;
+}
+
+.card-item button:hover {
+  background-color: #2980b9;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .lista-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
 }
 </style>

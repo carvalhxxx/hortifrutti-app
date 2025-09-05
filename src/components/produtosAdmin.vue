@@ -1,13 +1,18 @@
 <template>
-  <div>
+  <div class="app-container">
     <h1>Administração de Produtos</h1>
 
-    <!-- Formulário para adicionar/editar -->
-    <form @submit.prevent="salvarProduto" class="form-produto">
-      <input type="text" v-model="produtoForm.nome" placeholder="Nome do produto" required />
+    <!-- Formulário de produto -->
+    <form @submit.prevent="salvarProduto" class="formulario">
+      <input
+        type="text"
+        v-model="produtoForm.nome"
+        placeholder="Nome do produto"
+        required
+      />
 
       <!-- Preço + unidade lado a lado -->
-      <div class="preco-unidade">
+      <div class="form-row">
         <input
           type="text"
           v-model="produtoForm.precoStr"
@@ -22,161 +27,181 @@
       </div>
 
       <!-- Estoque + unidade lado a lado -->
-      <div class="estoque-unidade">
-        <input type="number" v-model.number="produtoForm.estoque" placeholder="Estoque" min="0" required />
+      <div class="form-row">
+        <input
+          type="number"
+          v-model.number="produtoForm.estoque"
+          placeholder="Estoque"
+          min="0"
+          required
+        />
         <span>{{ produtoForm.unidade }}</span>
       </div>
 
-      <button type="submit">{{ produtoForm.id ? 'Atualizar' : 'Adicionar' }}</button>
-      <button type="button" v-if="produtoForm.id" @click="cancelarEdicao">Cancelar</button>
+      <div class="form-actions">
+        <button type="submit">{{ produtoForm.id ? 'Atualizar' : 'Adicionar' }}</button>
+        <button type="button" v-if="produtoForm.id" @click="cancelarEdicao">Cancelar</button>
+      </div>
     </form>
-
-    <!-- Lista de produtos -->
-    <ul>
-      <li v-for="produto in produtos" :key="produto.id">
-        {{ produto.nome }} - R$ {{ formatarPreco(produto.preco) }} / {{ produto.unidade }} - Estoque: {{ produto.estoque }} {{ produto.unidade }}
-        <button @click="editarProduto(produto)">Editar</button>
-        <button @click="excluirProduto(produto.id)">Excluir</button>
-      </li>
-    </ul>
   </div>
 </template>
 
 <script>
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../supabase.js'
 
 export default {
   name: 'AdminProdutos',
-  data() {
-    return {
-      produtos: [],
-      produtoForm: {
-        id: null,
-        nome: '',
-        preco: 0,      // número real para salvar no banco
-        precoStr: '',  // string com vírgula digitada pelo usuário
-        estoque: 0,
-        unidade: 'un'
-      },
-      loading: false,
-      error: null
-    }
-  },
-  async created() {
-    await this.buscarProdutos()
-  },
-  methods: {
-    async buscarProdutos() {
-      this.loading = true
-      const { data, error } = await supabase.from('produtos').select('*').order('nome')
-      if (error) {
-        console.error(error)
-        this.error = 'Erro ao carregar produtos'
-      } else {
-        this.produtos = data
-      }
-      this.loading = false
-    },
+  setup() {
+    const route = useRoute()
+    const router = useRouter()
+    const produtoForm = ref({
+      id: null,
+      nome: '',
+      preco: 0,
+      precoStr: '',
+      estoque: 0,
+      unidade: 'un'
+    })
 
-    async salvarProduto() {
-      const precoConvertido = parseFloat(this.produtoForm.precoStr.replace(',', '.'))
+    const carregarProduto = async (id) => {
+      const { data, error } = await supabase.from('produtos').select('*').eq('id', id).single()
+      if (!error && data) {
+        produtoForm.value = {
+          ...data,
+          precoStr: data.preco != null ? data.preco.toFixed(2).replace('.', ',') : ''
+        }
+      }
+    }
+
+    onMounted(() => {
+      const id = route.query.id
+      if (id) carregarProduto(id)
+    })
+
+    const salvarProduto = async () => {
+      const precoConvertido = parseFloat(produtoForm.value.precoStr.replace(',', '.'))
       if (isNaN(precoConvertido)) return alert('Preço inválido')
-      this.produtoForm.preco = precoConvertido
+      produtoForm.value.preco = precoConvertido
 
-      if (this.produtoForm.id) {
-        const { error } = await supabase
-          .from('produtos')
-          .update({
-            nome: this.produtoForm.nome,
-            preco: this.produtoForm.preco,
-            estoque: this.produtoForm.estoque,
-            unidade: this.produtoForm.unidade
-          })
-          .eq('id', this.produtoForm.id)
-        if (error) return alert('Erro ao atualizar produto: ' + error.message)
-      } else {
-        const { error } = await supabase
-          .from('produtos')
-          .insert([{
-            nome: this.produtoForm.nome,
-            preco: this.produtoForm.preco,
-            estoque: this.produtoForm.estoque,
-            unidade: this.produtoForm.unidade
-          }])
-        if (error) return alert('Erro ao adicionar produto: ' + error.message)
+      try {
+        if (produtoForm.value.id) {
+          const { error } = await supabase
+            .from('produtos')
+            .update({
+              nome: produtoForm.value.nome,
+              preco: produtoForm.value.preco,
+              estoque: produtoForm.value.estoque,
+              unidade: produtoForm.value.unidade
+            })
+            .eq('id', produtoForm.value.id)
+          if (error) throw error
+          alert('Produto atualizado com sucesso!')
+        } else {
+          const { error } = await supabase
+            .from('produtos')
+            .insert([{
+              nome: produtoForm.value.nome,
+              preco: produtoForm.value.preco,
+              estoque: produtoForm.value.estoque,
+              unidade: produtoForm.value.unidade
+            }])
+          if (error) throw error
+          alert('Produto adicionado com sucesso!')
+        }
+        produtoForm.value = { id: null, nome: '', preco: 0, precoStr: '', estoque: 0, unidade: 'un' }
+        router.push('/produtos') // volta para a lista após salvar
+      } catch (err) {
+        alert('Erro ao salvar produto: ' + err.message)
       }
-
-      this.produtoForm = { id: null, nome: '', preco: 0, precoStr: '', estoque: 0, unidade: 'un' }
-      await this.buscarProdutos()
-    },
-
-    editarProduto(produto) {
-      this.produtoForm = {
-        ...produto,
-        precoStr: produto.preco.toString().replace('.', ',')
-      }
-    },
-
-    cancelarEdicao() {
-      this.produtoForm = { id: null, nome: '', preco: 0, precoStr: '', estoque: 0, unidade: 'un' }
-    },
-
-    async excluirProduto(id) {
-      if (!confirm('Deseja realmente excluir este produto?')) return
-      const { error } = await supabase.from('produtos').delete().eq('id', id)
-      if (error) return alert('Erro ao excluir produto: ' + error.message)
-      await this.buscarProdutos()
-    },
-
-    formatarPreco(valor) {
-      if (valor == null) return '0,00'
-      return new Intl.NumberFormat('pt-BR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      }).format(valor)
     }
+
+    const cancelarEdicao = () => {
+      produtoForm.value = { id: null, nome: '', preco: 0, precoStr: '', estoque: 0, unidade: 'un' }
+      router.push('/produtos') // volta para a lista
+    }
+
+    return { produtoForm, salvarProduto, cancelarEdicao }
   }
 }
 </script>
 
 <style scoped>
-ul {
-  list-style: none;
-  padding: 0;
-}
-li {
-  margin: 10px 0;
+.app-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
 }
 
-input, select {
-  margin-right: 5px;
-}
-
-/* Preço e unidade lado a lado */
-.preco-unidade {
+/* Formulário padronizado */
+.formulario {
   display: flex;
-  gap: 5px;
-  margin: 5px 0;
+  flex-direction: column;
+  gap: 15px;
 }
-.preco-unidade input {
+
+.formulario input,
+.formulario select {
+  width: 100%;
+  padding: 10px;
+  font-size: 14px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  transition: border 0.2s;
+}
+
+.formulario input:focus,
+.formulario select:focus {
+  outline: none;
+  border-color: #1abc9c;
+}
+
+/* Linhas de campos lado a lado */
+.form-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.form-row input {
   flex: 1;
 }
-.preco-unidade select {
-  width: 100px;
+
+.form-row select {
+  width: 120px;
 }
 
-/* Estoque e unidade lado a lado */
-.estoque-unidade {
+/* Botões do formulário */
+.form-actions {
   display: flex;
-  align-items: center;
-  gap: 5px;
-  margin: 5px 0;
-}
-.estoque-unidade input {
-  width: 100px;
+  gap: 10px;
 }
 
-button {
-  margin-left: 5px;
+.form-actions button {
+  padding: 10px 15px;
+  border-radius: 6px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.form-actions button[type="submit"] {
+  background-color: #1abc9c;
+  color: white;
+}
+
+.form-actions button[type="submit"]:hover {
+  background-color: #16a085;
+}
+
+.form-actions button[type="button"] {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.form-actions button[type="button"]:hover {
+  background-color: #c0392b;
 }
 </style>
