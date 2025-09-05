@@ -1,51 +1,54 @@
 <template>
-  <div>
-    <h1>{{ rotaForm.id ? 'Editar Rota' : 'Nova Rota' }}</h1>
-
-    <!-- Seleção do motorista -->
-    <label>Motorista:</label>
-    <select v-model="rotaForm.id_motorista">
-      <option value="">Selecione</option>
-      <option v-for="m in motoristas" :key="m.id" :value="m.id">{{ m.nome }}</option>
-    </select>
-
-    <!-- Data de saída -->
-    <label>Data de Saída:</label>
-    <input type="datetime-local" v-model="rotaForm.data_saida" />
-
-    <!-- Data de chegada -->
-    <label>Data de Chegada:</label>
-    <input type="datetime-local" v-model="rotaForm.data_chegada" />
-
-    <!-- Status -->
-    <label>Status:</label>
-    <select v-model="rotaForm.status">
-      <option v-for="s in statusDisponiveis" :key="s" :value="s">{{ s }}</option>
-    </select>
-
-    <!-- Observações -->
-    <label>Observações:</label>
-    <input type="text" v-model="rotaForm.observacoes" placeholder="Observações" />
-
-    <!-- Pedidos da rota -->
-    <h2>Pedidos</h2>
-    <div v-for="(pedido, index) in rotaForm.pedidos" :key="pedido.id" class="pedido-item">
-      {{ obterNomeCliente(pedido.id_pedido) }} - Status: {{ pedido.status_entrega }}
-      <button @click="removerPedido(index)">Remover</button>
+  <div class="app-container">
+    <!-- Header -->
+    <div class="produtos-header">
+      <h1>{{ rotaForm.id ? 'Editar Rota' : 'Nova Rota' }}</h1>
     </div>
 
-    <!-- Selecionar pedidos disponíveis -->
-    <label>Adicionar Pedido:</label>
-    <select v-model="pedidoSelecionado">
-      <option value="">Selecione um pedido</option>
-      <option v-for="p in pedidosDisponiveis" :key="p.id" :value="p.id">
-        {{ obterNomeCliente(p.id) }} - Total: R$ {{ formatarPreco(p.valor_total) }}
-      </option>
-    </select>
-    <button @click="adicionarPedido">Adicionar</button>
+    <!-- Formulário -->
+    <form @submit.prevent="salvarRota" class="formulario">
+      <label>Motorista:</label>
+      <select v-model="rotaForm.id_motorista" required>
+        <option value="">Selecione</option>
+        <option v-for="m in motoristas" :key="m.id" :value="m.id">{{ m.nome }}</option>
+      </select>
 
-    <br><br>
-    <button @click="salvarRota">{{ rotaForm.id ? 'Atualizar Rota' : 'Salvar Rota' }}</button>
+      <label>Data de Saída:</label>
+      <input type="datetime-local" v-model="rotaForm.data_saida" required />
+
+      <label>Data de Chegada:</label>
+      <input type="datetime-local" v-model="rotaForm.data_chegada" />
+
+      <label>Status:</label>
+      <select v-model="rotaForm.status">
+        <option v-for="s in statusDisponiveis" :key="s" :value="s">{{ s }}</option>
+      </select>
+
+      <label>Observações:</label>
+      <input type="text" v-model="rotaForm.observacoes" placeholder="Observações" />
+
+      <h2>Pedidos</h2>
+      <div v-for="(pedido, index) in rotaForm.pedidos" :key="pedido.id" class="form-row">
+        <span>{{ obterNomeCliente(pedido.id_pedido) }} - Status: {{ pedido.status_entrega }}</span>
+        <button type="button" @click="removerPedido(index)">Remover</button>
+      </div>
+
+      <label>Adicionar Pedido:</label>
+      <div class="form-row">
+        <select v-model="pedidoSelecionado">
+          <option value="">Selecione um pedido</option>
+          <option v-for="p in pedidosDisponiveis" :key="p.id" :value="p.id">
+            {{ obterNomeCliente(p.id) }} - Total: R$ {{ formatarPreco(p.valor_total) }}
+          </option>
+        </select>
+        <button type="button" @click="adicionarPedido">Adicionar</button>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit">{{ rotaForm.id ? 'Atualizar' : 'Salvar' }}</button>
+        <button type="button" @click="cancelarEdicao">Cancelar</button>
+      </div>
+    </form>
   </div>
 </template>
 
@@ -66,7 +69,7 @@ export default {
         data_chegada: '',
         status: 'aberta',
         observacoes: '',
-        pedidos: [] // pedidos vinculados {id_pedido, status_entrega, data_entrega}
+        pedidos: []
       },
       pedidoSelecionado: ''
     }
@@ -78,7 +81,6 @@ export default {
   },
   computed: {
     pedidosDisponiveis() {
-      // Exclui pedidos já vinculados à rota
       const ids = this.rotaForm.pedidos.map(p => p.id_pedido)
       return this.pedidos.filter(p => !ids.includes(p.id))
     }
@@ -89,9 +91,7 @@ export default {
       if (!error) this.motoristas = data
     },
     async buscarPedidos() {
-      const { data, error } = await supabase.from('pedidos')
-        .select('*')
-        .order('data_pedido', { ascending: false })
+      const { data, error } = await supabase.from('pedidos').select('*').order('data_pedido', { ascending: false })
       if (!error) this.pedidos = data
     },
     async carregarRota() {
@@ -148,20 +148,15 @@ export default {
       }
 
       if (this.rotaForm.id) {
-        // Atualizar rota
         const { error } = await supabase.from('rotas').update(rotaData).eq('id', this.rotaForm.id)
         if (error) return alert('Erro ao atualizar rota: ' + error.message)
-
-        // Deletar pedidos antigos
         await supabase.from('rota_pedidos').delete().eq('id_rota', this.rotaForm.id)
       } else {
-        // Criar rota
         const { data, error } = await supabase.from('rotas').insert([rotaData]).select().single()
         if (error) return alert('Erro ao criar rota: ' + error.message)
         this.rotaForm.id = data.id
       }
 
-      // Inserir pedidos vinculados
       for (let p of this.rotaForm.pedidos) {
         const { error } = await supabase.from('rota_pedidos').insert([{
           id_rota: this.rotaForm.id,
@@ -173,29 +168,99 @@ export default {
       }
 
       alert('Rota salva com sucesso!')
+      this.cancelarEdicao()
+    },
+    cancelarEdicao() {
+      this.rotaForm = {
+        id: null,
+        id_motorista: '',
+        data_saida: '',
+        data_chegada: '',
+        status: 'aberta',
+        observacoes: '',
+        pedidos: []
+      }
       this.$router.push('/rotas')
     }
   }
 }
 </script>
 
-<style scoped>
-label {
-  display: block;
-  margin-top: 10px;
+<style>
+.app-container {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 20px;
 }
-input, select {
-  padding: 5px;
-  margin-bottom: 5px;
-}
-.pedido-item {
+
+/* Formulário padronizado global */
+.formulario {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 5px;
+  flex-direction: column;
+  gap: 15px;
 }
-button {
-  padding: 5px 10px;
+
+.formulario input,
+.formulario select {
+  width: 100%;
+  padding: 10px;
+  font-size: 14px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  transition: border 0.2s;
+}
+
+.formulario input:focus,
+.formulario select:focus {
+  outline: none;
+  border-color: #1abc9c;
+}
+
+/* Linhas de campos lado a lado */
+.form-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.form-row input,
+.form-row select {
+  flex: 1;
+}
+
+/* Botões do formulário */
+.form-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.form-actions button,
+.form-row button {
+  padding: 10px 15px;
+  border-radius: 6px;
+  border: none;
+  font-weight: 600;
   cursor: pointer;
+  transition: background 0.2s;
+}
+
+.form-actions button[type="submit"],
+.form-row button[type="button"] {
+  background-color: #1abc9c;
+  color: white;
+}
+
+.form-actions button[type="submit"]:hover,
+.form-row button[type="button"]:hover {
+  background-color: #16a085;
+}
+
+/* Botão Cancelar */
+.form-actions button[type="button"] {
+  background-color: #e74c3c;
+}
+
+.form-actions button[type="button"]:hover {
+  background-color: #c0392b;
 }
 </style>

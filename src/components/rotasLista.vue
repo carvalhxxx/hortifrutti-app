@@ -1,37 +1,42 @@
 <template>
-  <div>
-    <h1>Rotas</h1>
+  <div class="app-container">
+    <!-- Header com título e botão Nova Rota -->
+    <div class="produtos-header">
+      <h1>Rotas</h1>
+      <button @click="$router.push({ name: 'rotasForm' })">Nova Rota</button>
+    </div>
 
     <!-- Filtros -->
     <h3>Filtrar Rotas</h3>
-    <div class="filtros">
-      <label>Motorista:</label>
-      <select v-model="filtroMotorista">
-        <option value="">Todos</option>
-        <option v-for="m in motoristas" :key="m.id" :value="m.id">{{ m.nome }}</option>
-      </select>
+    <form class="filtros">
+      <div>
+        <label>Motorista:</label>
+        <select v-model="filtroMotorista">
+          <option value="">Todos</option>
+          <option v-for="m in motoristas" :key="m.id" :value="m.id">{{ m.nome }}</option>
+        </select>
+      </div>
+      <div>
+        <label>Status:</label>
+        <select v-model="filtroStatus">
+          <option value="">Todos</option>
+          <option v-for="s in statusDisponiveis" :key="s" :value="s">{{ s }}</option>
+        </select>
+      </div>
+    </form>
 
-      <label>Status:</label>
-      <select v-model="filtroStatus">
-        <option value="">Todos</option>
-        <option v-for="s in statusDisponiveis" :key="s" :value="s">{{ s }}</option>
-      </select>
+    <!-- Grid de rotas -->
+    <div class="lista-grid">
+      <div v-for="rota in rotasFiltradas" :key="rota.id" class="card-item">
+        <p><strong>Motorista:</strong> {{ obterNomeMotorista(rota.id_motorista) }}</p>
+        <p><strong>Status:</strong> {{ rota.status }}</p>
+        <p><strong>Saída:</strong> {{ formatarData(rota.data_saida) }}</p>
+        <p><strong>Chegada:</strong> {{ formatarData(rota.data_chegada) }}</p>
+        <button @click="$router.push({ name: 'rotasForm', params: { id: rota.id } })">
+          Editar
+        </button>
+      </div>
     </div>
-
-    <!-- Botão nova rota -->
-    <button @click="$router.push({ name: 'rotasForm' })">Nova Rota</button>
-
-    <!-- Lista de rotas -->
-    <h2>Rotas existentes</h2>
-    <ul>
-      <li v-for="rota in rotasFiltradas" :key="rota.id">
-        Motorista: {{ obterNomeMotorista(rota.id_motorista) }} - 
-        Status: {{ rota.status }} - 
-        Saída: {{ rota.data_saida }} - 
-        Chegada: {{ rota.data_chegada || '-' }}
-        <button @click="$router.push({ name: 'rotasForm', params: { id: rota.id } })">Editar</button>
-      </li>
-    </ul>
   </div>
 </template>
 
@@ -75,27 +80,64 @@ export default {
     obterNomeMotorista(id_motorista) {
       const motorista = this.motoristas.find(m => m.id === id_motorista)
       return motorista ? motorista.nome : ''
+    },
+    formatarData(dt) {
+      if (!dt) return '-'
+      const data = new Date(dt)
+      return data.toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
     }
   }
 }
 </script>
 
 <style scoped>
+.app-container {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.produtos-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
 .filtros {
   display: flex;
-  flex-wrap: wrap;
   gap: 10px;
+  flex-wrap: wrap;
   margin-bottom: 15px;
-  align-items: center;
 }
+
 .filtros label {
   margin-right: 5px;
 }
+
 .filtros select {
-  padding: 3px 5px;
+  padding: 5px;
 }
+
+.lista-grid {
+  display: grid;
+  gap: 15px;
+}
+
+.card-item {
+  padding: 15px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
 button {
-  padding: 5px 10px;
+  padding: 8px 12px;
   cursor: pointer;
   margin-top: 10px;
 }

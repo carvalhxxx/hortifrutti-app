@@ -3,15 +3,19 @@ import listaProdutos from '../components/listaProdutos.vue'
 import produtosAdmin from '../components/produtosAdmin.vue'
 import pedidosCliente from '../components/pedidosCliente.vue'
 import pedidosForm from '../components/pedidosForm.vue'
+import listaClientes from '../components/listaClientes.vue'
 import clientesAdmin from '../components/clientesAdmin.vue'
-import motoristaAdmin from '../components/motoristaAdmin.vue'
+import listaMotorista from '../components/listaMotorista.vue' // <--- novo
+import motoristaAdmin from '../components/motoristaAdmin.vue'    // formulário
 import loginTela from '../components/loginTela.vue'
 import rotasLista from '../components/rotasLista.vue'
 import rotasForm from '../components/rotasForm.vue'
+import inicioApp from '../components/inicioApp.vue'
 import { supabase } from '../supabase.js'
 
 const routes = [
-  { path: '/', redirect: '/produtos/lista' },
+  { path: '/', redirect: '/inicio' },
+  { path: '/inicio', component: inicioApp },
 
   // Produtos
   { path: '/produtos/lista', component: listaProdutos },
@@ -22,10 +26,12 @@ const routes = [
   { path: '/pedidos/form/:id?', component: pedidosForm, name: 'pedidosForm' },
 
   // Clientes
-  { path: '/clientes', component: clientesAdmin },
+  { path: '/clientes', component: listaClientes },
+  { path: '/clientes/form/:id?', component: clientesAdmin, name: 'clientesForm' },
 
   // Motoristas
-  { path: '/motoristas', component: motoristaAdmin },
+  { path: '/motoristas', component: listaMotorista },
+  { path: '/motoristas/form/:id?', component: motoristaAdmin, name: 'motoristasForm' },
 
   // Rotas
   { path: '/rotas', component: rotasLista },
@@ -44,17 +50,15 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const { data: { session } } = await supabase.auth.getSession()
 
-  // Se não estiver logado e não estiver indo para /login, redireciona
   if (!session && to.path !== "/login") {
     return next("/login")
   }
 
-  // Se estiver logado e for /login, redireciona para a página inicial
   if (session && to.path === "/login") {
     return next("/produtos/lista")
   }
 
-  next() // permite navegação
+  next()
 })
 
 export default router

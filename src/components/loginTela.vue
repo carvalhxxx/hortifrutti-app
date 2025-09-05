@@ -1,21 +1,23 @@
 <template>
-  <div class="login-container">
-    <h2>{{ modo === 'login' ? 'Login' : 'Cadastro' }}</h2>
+  <div class="login-wrapper">
+    <div class="login-box">
+      <h2>{{ modo === 'login' ? 'Login' : 'Cadastro' }}</h2>
 
-    <input v-model="username" placeholder="Usuário" />
-    <input v-model="senha" type="password" placeholder="Senha" />
+      <input v-model="username" placeholder="Usuário" />
+      <input v-model="senha" type="password" placeholder="Senha" />
 
-    <button v-if="modo === 'login'" @click="login">Entrar</button>
-    <button v-else @click="signup">Cadastrar</button>
+      <button v-if="modo === 'login'" @click="login">Entrar</button>
+      <button v-else @click="signup">Cadastrar</button>
 
-    <p class="alternar">
-      {{ modo === 'login' ? 'Não tem conta?' : 'Já tem conta?' }}
-      <a href="#" @click.prevent="alternarModo">
-        {{ modo === 'login' ? 'Cadastrar' : 'Entrar' }}
-      </a>
-    </p>
+      <p class="alternar">
+        {{ modo === 'login' ? 'Não tem conta?' : 'Já tem conta?' }}
+        <a href="#" @click.prevent="alternarModo">
+          {{ modo === 'login' ? 'Cadastrar' : 'Entrar' }}
+        </a>
+      </p>
 
-    <p v-if="erro" class="erro">{{ erro }}</p>
+      <p v-if="erro" class="erro">{{ erro }}</p>
+    </div>
   </div>
 </template>
 
@@ -28,7 +30,7 @@ export default {
     return {
       username: "",
       senha: "",
-      modo: "login", // ou "cadastro"
+      modo: "login",
       erro: null
     }
   },
@@ -43,17 +45,10 @@ export default {
 
       try {
         const emailFicticio = `${userNameNormalized}@meusistema.local`
-
-        const { error } = await supabase.auth.signUp({
-          email: emailFicticio,
-          password: this.senha
-        })
-
+        const { error } = await supabase.auth.signUp({ email: emailFicticio, password: this.senha })
         if (error) throw error
-
         alert("Cadastro realizado! Faça login agora.")
         this.modo = "login"
-
       } catch (err) {
         this.erro = "Erro ao cadastrar: " + err.message
       }
@@ -69,21 +64,14 @@ export default {
 
       try {
         const emailFicticio = `${userNameNormalized}@meusistema.local`
-
-        const { error } = await supabase.auth.signInWithPassword({
-          email: emailFicticio,
-          password: this.senha
-        })
-
+        const { error } = await supabase.auth.signInWithPassword({ email: emailFicticio, password: this.senha })
         if (error) {
           this.erro = "Usuário ou senha incorretos"
           return
         }
 
-        // Login bem-sucedido
         alert("Login realizado com sucesso!")
         this.$router.push("/produtos")
-
       } catch (err) {
         this.erro = "Ocorreu um erro: " + err.message
       }
@@ -97,43 +85,83 @@ export default {
 }
 </script>
 
-<style>
-.login-container {
-  max-width: 300px;
-  margin: 100px auto;
-  padding: 20px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+<style scoped>
+/* Garantir que body e html ocupem 100% da tela e removam margens */
+html, body, #app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+/* Wrapper que centraliza vertical e horizontalmente */
+.login-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+  background-color: #f5f5f5;
+}
+
+/* Caixa de login */
+.login-box {
   background: white;
+  padding: 30px 25px;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  max-width: 350px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
   text-align: center;
 }
-.login-container input {
-  display: block;
-  width: 100%;
-  margin-bottom: 12px;
-  padding: 8px;
-}
-.login-container button {
+
+/* Inputs */
+.login-box input {
   width: 100%;
   padding: 10px;
-  background: #1abc9c;
+  font-size: 14px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.login-box input:focus {
+  outline: none;
+  border-color: #1abc9c;
+}
+
+/* Botões */
+.login-box button {
+  padding: 10px;
+  border-radius: 6px;
   border: none;
+  background-color: #1abc9c;
   color: white;
-  border-radius: 5px;
+  font-weight: 600;
   cursor: pointer;
 }
+
+.login-box button:hover {
+  background-color: #16a085;
+}
+
+/* Alternar modo */
 .alternar {
-  margin-top: 15px;
+  margin-top: 10px;
   font-size: 14px;
 }
+
 .alternar a {
   color: #1abc9c;
   cursor: pointer;
   text-decoration: none;
   font-weight: bold;
 }
+
+/* Mensagem de erro */
 .erro {
   color: red;
-  margin-top: 10px;
+  margin-top: 5px;
 }
 </style>

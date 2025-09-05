@@ -111,80 +111,10 @@ export default {
 </script>
 
 <style scoped>
-/* Grid para filtros */
-.filtros {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.filtros label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: 600;
-}
-
-.filtros input,
-.filtros select {
-  width: 100%;
-  padding: 8px 10px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  font-size: 14px;
-  transition: border 0.2s;
-}
-
-.filtros input:focus,
-.filtros select:focus {
-  border-color: #1abc9c;
-  outline: none;
-}
-
-/* Grid de pedidos */
-.lista-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 20px;
-}
-
-/* Card de pedido */
-.card-item {
-  background-color: #fff;
-  padding: 15px;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+/* Só mantemos o header porque o resto já está no global.css */
+.produtos-header {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.card-item p {
-  margin: 0;
-  font-size: 14px;
-}
-
-/* Botão dentro do card */
-.card-item button {
-  width: 100px;
-  margin-top: 10px;
-  padding: 8px 10px;
-  background-color: #3498db;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.card-item button:hover {
-  background-color: #2980b9;
-}
-
-/* Responsividade */
-@media (max-width: 768px) {
-  .lista-grid {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  }
+  justify-content: space-between;
+  align-items: center;
 }
 </style>

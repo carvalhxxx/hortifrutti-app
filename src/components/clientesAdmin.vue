@@ -1,70 +1,63 @@
 <template>
-  <div>
-    <h2>Cadastro de Clientes</h2>
-    <form @submit.prevent="salvarCliente">
+  <div class="app-container">
+    <div class="produtos-header">
+      <h1>{{ cliente.id ? 'Editar Cliente' : 'Novo Cliente' }}</h1>
+    </div>
+
+    <form @submit.prevent="salvarCliente" class="formulario">
       <input v-model="cliente.nome" placeholder="Nome do cliente" required />
       <input v-model="cliente.nome_fantasia" placeholder="Nome Fantasia" />
-      <select v-model="cliente.tipo_cliente">
-        <option value="PF">Pessoa Física</option>
-        <option value="PJ">Pessoa Jurídica</option>
-      </select>
-      <input v-model="cliente.cnpj_cpf" placeholder="CPF/CNPJ" />
+
+      <div class="form-row">
+        <select v-model="cliente.tipo_cliente">
+          <option value="PF">Pessoa Física</option>
+          <option value="PJ">Pessoa Jurídica</option>
+        </select>
+        <input v-model="cliente.cnpj_cpf" placeholder="CPF/CNPJ" />
+      </div>
+
       <input v-model="cliente.ie" placeholder="Inscrição Estadual" />
       <input v-model="cliente.rua" placeholder="Rua" />
-      <input v-model="cliente.numero" placeholder="Número" />
-      <input v-model="cliente.complemento" placeholder="Complemento" />
+      <div class="form-row">
+        <input v-model="cliente.numero" placeholder="Número" />
+        <input v-model="cliente.complemento" placeholder="Complemento" />
+      </div>
       <input v-model="cliente.bairro" placeholder="Bairro" />
       <input v-model="cliente.cidade" placeholder="Cidade" />
-      <input v-model="cliente.estado" placeholder="Estado" />
-      <input v-model="cliente.cep" placeholder="CEP" />
+      <div class="form-row">
+        <input v-model="cliente.estado" placeholder="Estado" />
+        <input v-model="cliente.cep" placeholder="CEP" />
+      </div>
       <input v-model="cliente.telefone" placeholder="Telefone principal" />
       <input v-model="cliente.telefone2" placeholder="Telefone secundário" />
-      <input v-model="cliente.email" placeholder="Email" type="email" />
-      <input v-model="cliente.contato_nome" placeholder="Nome do contato" />
-      <input v-model="cliente.contato_cargo" placeholder="Cargo do contato" />
-      <input v-model.number="cliente.limite_credito" placeholder="Limite de crédito" type="number" step="0.01" />
+      <input v-model="cliente.email" type="email" placeholder="Email" />
+      <div class="form-row">
+        <input v-model="cliente.contato_nome" placeholder="Nome do contato" />
+        <input v-model="cliente.contato_cargo" placeholder="Cargo do contato" />
+      </div>
+      <input v-model.number="cliente.limite_credito" type="number" step="0.01" placeholder="Limite de crédito" />
       <input v-model="cliente.observacoes" placeholder="Observações" />
+
       <select v-model="cliente.status">
         <option value="ativo">Ativo</option>
         <option value="inativo">Inativo</option>
       </select>
 
-      <button type="submit">{{ cliente.id ? 'Atualizar' : 'Salvar' }}</button>
+      <div class="form-actions">
+        <button type="submit">{{ cliente.id ? 'Atualizar' : 'Salvar' }}</button>
+        <button type="button" @click="cancelarEdicao">Cancelar</button>
+      </div>
     </form>
-
-    <h3>Lista de Clientes</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Nome</th>
-          <th>Fantasia</th>
-          <th>CPF/CNPJ</th>
-          <th>Telefone</th>
-          <th>Email</th>
-          <th>Status</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="c in clientes" :key="c.id">
-          <td>{{ c.nome }}</td>
-          <td>{{ c.nome_fantasia }}</td>
-          <td>{{ c.cnpj_cpf }}</td>
-          <td>{{ c.telefone }}</td>
-          <td>{{ c.email }}</td>
-          <td>{{ c.status }}</td>
-          <td>
-            <button @click="editarCliente(c)">Editar</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../supabase.js'
+
+const route = useRoute()
+const router = useRouter()
 
 const cliente = ref({
   nome: '',
@@ -89,45 +82,123 @@ const cliente = ref({
   status: 'ativo'
 })
 
-const clientes = ref([])
-
-const carregarClientes = async () => {
-  const { data, error } = await supabase.from('clientes').select('*').order('nome')
-  if (!error) clientes.value = data
+const carregarCliente = async (id) => {
+  const { data, error } = await supabase.from('clientes').select('*').eq('id', id).single()
+  if (!error && data) cliente.value = data
 }
 
 const salvarCliente = async () => {
   try {
     const clienteToSave = { ...cliente.value }
-    delete clienteToSave.id // remove o id para o Supabase gerar UUID
+    delete clienteToSave.id
 
     let response
     if (cliente.value.id) {
-      // Atualiza cliente existente
       response = await supabase.from('clientes').update(clienteToSave).eq('id', cliente.value.id)
     } else {
-      // Insere novo cliente
       response = await supabase.from('clientes').insert([clienteToSave])
     }
 
-    if (response.error) {
-      return alert('Erro ao salvar cliente: ' + response.error.message)
-    }
+    if (response.error) return alert('Erro ao salvar cliente: ' + response.error.message)
 
     alert('Cliente salvo com sucesso!')
-    cliente.value = { tipo_cliente: 'PF', limite_credito: 0, status: 'ativo' }
-    await carregarClientes()
+    cliente.value = {
+      nome: '', nome_fantasia: '', tipo_cliente: 'PF', cnpj_cpf: '', ie: '',
+      rua: '', numero: '', complemento: '', bairro: '', cidade: '', estado: '',
+      cep: '', telefone: '', telefone2: '', email: '', contato_nome: '', contato_cargo: '',
+      limite_credito: 0, observacoes: '', status: 'ativo'
+    }
+    router.push('/clientes')
   } catch (err) {
     alert('Erro ao salvar cliente: ' + err.message)
   }
 }
 
-const editarCliente = (c) => {
-  cliente.value = { ...c }
+const cancelarEdicao = () => {
+  cliente.value = {
+    nome: '', nome_fantasia: '', tipo_cliente: 'PF', cnpj_cpf: '', ie: '',
+    rua: '', numero: '', complemento: '', bairro: '', cidade: '', estado: '',
+    cep: '', telefone: '', telefone2: '', email: '', contato_nome: '', contato_cargo: '',
+    limite_credito: 0, observacoes: '', status: 'ativo'
+  }
+  router.push('/clientes')
 }
 
 onMounted(() => {
-  carregarClientes()
+  if (route.params.id) carregarCliente(route.params.id)
 })
 </script>
 
+<style scoped>
+.app-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Formulário padronizado */
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.formulario input,
+.formulario select {
+  width: 100%;
+  padding: 10px;
+  font-size: 14px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  transition: border 0.2s;
+}
+
+.formulario input:focus,
+.formulario select:focus {
+  outline: none;
+  border-color: #1abc9c;
+}
+
+.form-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.form-row input,
+.form-row select {
+  flex: 1;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.form-actions button {
+  padding: 10px 15px;
+  border-radius: 6px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.form-actions button[type="submit"] {
+  background-color: #1abc9c;
+  color: white;
+}
+
+.form-actions button[type="submit"]:hover {
+  background-color: #16a085;
+}
+
+.form-actions button[type="button"] {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.form-actions button[type="button"]:hover {
+  background-color: #c0392b;
+}
+</style>
