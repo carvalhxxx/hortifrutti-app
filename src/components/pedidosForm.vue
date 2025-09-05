@@ -174,9 +174,10 @@ export default {
       if (!this.pedidoForm.data_entrega) return alert('Selecione a data de entrega')
       if (this.pedidoForm.itens.length === 0 && this.pedidoForm.status !== 'cancelado') return alert('Adicione ao menos um produto')
 
-      let pedidoData = {
+      // Objeto com apenas campos válidos da tabela "pedidos"
+      const pedidoData = {
         id_cliente: this.pedidoForm.id_cliente,
-        id_motorista: this.pedidoForm.id_motorista,
+        id_motorista: this.pedidoForm.id_motorista || null,
         data_entrega: this.pedidoForm.data_entrega,
         status: this.pedidoForm.status,
         observacoes: this.pedidoForm.observacoes,
@@ -184,15 +185,25 @@ export default {
       }
 
       if (this.pedidoForm.id) {
-        const { error } = await supabase.from('pedidos').update(pedidoData).eq('id', this.pedidoForm.id)
+        const { error } = await supabase
+          .from('pedidos')
+          .update(pedidoData)
+          .eq('id', this.pedidoForm.id)
         if (error) return alert('Erro ao atualizar pedido: ' + error.message)
+
+        // Atualiza itens: remove antigos e insere novos
         await supabase.from('itens_pedido').delete().eq('id_pedido', this.pedidoForm.id)
       } else {
-        const { data, error } = await supabase.from('pedidos').insert([pedidoData]).select().single()
+        const { data, error } = await supabase
+          .from('pedidos')
+          .insert([pedidoData])
+          .select()
+          .single()
         if (error) return alert('Erro ao criar pedido: ' + error.message)
         this.pedidoForm.id = data.id
       }
 
+      // Inserir itens
       for (let item of this.pedidoForm.itens) {
         const { error } = await supabase.from('itens_pedido').insert([{
           id_pedido: this.pedidoForm.id,
@@ -218,7 +229,6 @@ export default {
   }
 }
 </script>
-
 
 <style scoped>
 .app-container {
