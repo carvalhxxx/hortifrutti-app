@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <!-- Header com título e botão Novo Cliente -->
+    <!-- Header -->
     <div class="produtos-header">
       <h1>Clientes</h1>
       <button @click="$router.push({ name: 'clientesForm' })">Novo Cliente</button>
@@ -23,18 +23,21 @@
       </div>
     </form>
 
+    <!-- Mensagem caso não haja clientes -->
+    <div v-if="clientesFiltrados.length === 0">
+      <p>Nenhum cliente encontrado.</p>
+    </div>
+
     <!-- Grid de clientes -->
     <div class="lista-grid">
       <div v-for="c in clientesFiltrados" :key="c.id" class="card-item">
         <p><strong>Nome:</strong> {{ c.nome }}</p>
-        <p><strong>Fantasia:</strong> {{ c.nome_fantasia }}</p>
-        <p><strong>CPF/CNPJ:</strong> {{ c.cnpj_cpf }}</p>
-        <p><strong>Telefone:</strong> {{ c.telefone }}</p>
-        <p><strong>Email:</strong> {{ c.email }}</p>
+        <p v-if="c.nome_fantasia"><strong>Fantasia:</strong> {{ c.nome_fantasia }}</p>
+        <p v-if="c.cnpj_cpf"><strong>CPF/CNPJ:</strong> {{ c.cnpj_cpf }}</p>
+        <p v-if="c.telefone"><strong>Telefone:</strong> {{ c.telefone }}</p>
+        <p v-if="c.email"><strong>Email:</strong> {{ c.email }}</p>
         <p><strong>Status:</strong> {{ c.status }}</p>
-        <button @click="$router.push({ name: 'clientesForm', params: { id: c.id } })">
-          Editar
-        </button>
+        <button @click="$router.push({ name: 'clientesForm', params: { id: c.id } })">Editar</button>
       </div>
     </div>
   </div>
@@ -46,17 +49,22 @@ import { supabase } from '../supabase.js'
 
 const clientes = ref([])
 
-// Filtros
 const filtroNome = ref('')
 const filtroStatus = ref('')
 
-// Busca clientes do Supabase
 const carregarClientes = async () => {
-  const { data, error } = await supabase.from('clientes').select('*').order('nome')
-  if (!error) clientes.value = data
+  const { data, error } = await supabase
+    .from('clientes')
+    .select('*')
+    .order('nome')
+
+  if (error) {
+    console.error('Erro ao carregar clientes:', error.message)
+  } else {
+    clientes.value = data
+  }
 }
 
-// Computed: clientes filtrados
 const clientesFiltrados = computed(() => {
   return clientes.value.filter(c => {
     let ok = true
@@ -79,5 +87,19 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
+.lista-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+}
 
+.card-item {
+  background-color: #fff;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 </style>
