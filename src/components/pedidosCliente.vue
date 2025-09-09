@@ -58,7 +58,7 @@ export default {
     return {
       clientes: [],
       pedidos: [],
-      statusDisponiveis: ['aberto','confirmado','separacao','rota','entregue','cancelado'],
+      statusDisponiveis: ['Aberto','Confirmado','Separacao','Rota','Entregue','Cancelado'],
 
       // Filtros
       filtroClienteNome: '',

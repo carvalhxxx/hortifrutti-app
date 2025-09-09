@@ -26,7 +26,7 @@
           </select>
         </div>
 
-        <div style="width: 150px">
+        <div style="width: 120px">
           <label>Status:</label>
           <select v-model="pedidoForm.status">
             <option v-for="s in statusDisponiveis" :key="s" :value="s">{{ s }}</option>
@@ -48,23 +48,29 @@
 
       <!-- Itens do pedido -->
       <h2>Produtos</h2>
-      <div v-for="(item, index) in pedidoForm.itens" :key="index" class="form-row">
-        <div style="flex: 1">
-          <select v-model="item.id_produto" @change="atualizarPreco(index)">
-            <option value="" disabled>-- Selecione o produto --</option>
-            <option v-for="produto in produtos" :key="produto.id" :value="produto.id">
-              {{ produto.nome }} - R$ {{ formatarPreco(produto.preco) }} / {{ produto.unidade }} - Estoque: {{ produto.estoque }}
-            </option>
-          </select>
+      <div v-for="(item, index) in pedidoForm.itens" :key="index" class="item-card-mobile">
+        <select v-model="item.id_produto" @change="atualizarPreco(index)">
+          <option value="" disabled>-- Selecione o produto --</option>
+          <option v-for="produto in produtos" :key="produto.id" :value="produto.id">
+            {{ produto.nome }}
+          </option>
+        </select>
+
+        <div class="item-row">
+          <input type="number"
+                 v-model.number="item.quantidade"
+                 min="0"
+                 :max="obterEstoque(item.id_produto)"
+                 :step="getStep(item.id_produto)" />
+          <span>{{ obterUnidade(item.id_produto) }}</span>
+          <span class="item-total">R$ {{ formatarPreco(item.quantidade * item.preco_unitario) }}</span>
+          <button type="button" class="remove-x" @click="removerItem(index)">×</button>
         </div>
-        <input type="number" v-model.number="item.quantidade" min="0" :max="obterEstoque(item.id_produto)" :step="getStep(item.id_produto)" placeholder="Qtd" />
-        <span>{{ obterUnidade(item.id_produto) }}</span>
-        <button type="button" @click="removerItem(index)">Remover</button>
       </div>
 
       <button type="button" @click="adicionarItem">Adicionar Produto</button>
 
-      <!-- Total -->
+      <!-- Total Geral -->
       <h3>Total: R$ {{ formatarPreco(calcularTotal()) }}</h3>
 
       <!-- Botões do formulário -->
@@ -86,7 +92,7 @@ export default {
       clientes: [],
       produtos: [],
       motoristas: [],
-      statusDisponiveis: ['aberto','confirmado','separacao','rota','entregue','cancelado'],
+      statusDisponiveis: ['Aberto','Confirmado','Separacao','Rota','Entregue','Cancelado'],
       pedidoForm: {
         id: null,
         id_cliente: null,
@@ -170,58 +176,82 @@ export default {
     },
 
     async salvarPedido() {
-      if (!this.pedidoForm.id_cliente) return alert('Selecione o cliente')
-      if (!this.pedidoForm.data_entrega) return alert('Selecione a data de entrega')
-      if (this.pedidoForm.itens.length === 0 && this.pedidoForm.status !== 'cancelado') return alert('Adicione ao menos um produto')
+  try {
+    const pedidoData = {
+      id_cliente: this.pedidoForm.id_cliente,
+      id_motorista: this.pedidoForm.id_motorista || null,
+      data_entrega: this.pedidoForm.data_entrega,
+      status: this.pedidoForm.status,
+      observacoes: this.pedidoForm.observacoes,
+      valor_total: this.calcularTotal()
+    }
 
-      // Objeto com apenas campos válidos da tabela "pedidos"
-      const pedidoData = {
-        id_cliente: this.pedidoForm.id_cliente,
-        id_motorista: this.pedidoForm.id_motorista || null,
-        data_entrega: this.pedidoForm.data_entrega,
-        status: this.pedidoForm.status,
-        observacoes: this.pedidoForm.observacoes,
-        valor_total: this.calcularTotal()
-      }
+    let pedidoAntigo = null
+    if (this.pedidoForm.id) {
+      // Buscar o status antigo do pedido
+      const { data, error } = await supabase
+        .from('pedidos')
+        .select('status')
+        .eq('id', this.pedidoForm.id)
+        .single()
+      if (!error) pedidoAntigo = data
+    }
 
-      if (this.pedidoForm.id) {
-        const { error } = await supabase
-          .from('pedidos')
-          .update(pedidoData)
-          .eq('id', this.pedidoForm.id)
-        if (error) return alert('Erro ao atualizar pedido: ' + error.message)
+    if (!this.pedidoForm.id) {
+      // Criar pedido novo
+      const { data, error } = await supabase
+        .from('pedidos')
+        .insert([pedidoData])
+        .select()
+        .single()
+      if (error) throw error
+      this.pedidoForm.id = data.id
+    } else {
+      // Atualizar pedido existente
+      const { error } = await supabase
+        .from('pedidos')
+        .update(pedidoData)
+        .eq('id', this.pedidoForm.id)
+      if (error) throw error
 
-        // Atualiza itens: remove antigos e insere novos
-        await supabase.from('itens_pedido').delete().eq('id_pedido', this.pedidoForm.id)
-      } else {
-        const { data, error } = await supabase
-          .from('pedidos')
-          .insert([pedidoData])
-          .select()
-          .single()
-        if (error) return alert('Erro ao criar pedido: ' + error.message)
-        this.pedidoForm.id = data.id
-      }
+      // Limpa itens antigos
+      await supabase.from('itens_pedido').delete().eq('id_pedido', this.pedidoForm.id)
+    }
 
-      // Inserir itens
+    // Inserir itens
+    for (let item of this.pedidoForm.itens) {
+      await supabase.from('itens_pedido').insert([{
+        id_pedido: this.pedidoForm.id,
+        id_produto: item.id_produto,
+        quantidade: item.quantidade,
+        preco_unitario: item.preco_unitario
+      }])
+    }
+
+    // 🔥 Controle de estoque
+    const mudouParaConfirmado =
+      (!this.pedidoForm.id && this.pedidoForm.status === 'Confirmado') ||
+      (pedidoAntigo && pedidoAntigo.status !== 'Confirmado' && this.pedidoForm.status === 'Confirmado')
+
+    if (mudouParaConfirmado) {
       for (let item of this.pedidoForm.itens) {
-        const { error } = await supabase.from('itens_pedido').insert([{
-          id_pedido: this.pedidoForm.id,
-          id_produto: item.id_produto,
-          quantidade: item.quantidade,
-          preco_unitario: item.preco_unitario
-        }])
-        if (error) return alert('Erro ao adicionar itens: ' + error.message)
-
         const produto = this.produtos.find(p => p.id === item.id_produto)
         if (produto) {
-          await supabase.from('produtos').update({ estoque: produto.estoque - item.quantidade }).eq('id', produto.id)
+          await supabase
+            .from('produtos')
+            .update({ estoque: produto.estoque - item.quantidade })
+            .eq('id', produto.id)
         }
       }
+    }
 
-      alert('Pedido salvo com sucesso!')
-      this.$router.push('/pedidos')
-    },
+    alert('Pedido salvo com sucesso!')
+    this.$router.push('/pedidos')
+  } catch (err) {
+    console.error(err)
+    alert('Erro ao salvar pedido: ' + err.message)
+  }
+},
 
     cancelarEdicao() {
       this.$router.push('/pedidos')
@@ -231,80 +261,66 @@ export default {
 </script>
 
 <style scoped>
-.app-container {
-  max-width: 700px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-/* Formulário padronizado */
-.formulario {
+.item-card-mobile {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 5px;
+  background-color: #fff;
+  padding: 8px 10px;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  margin-bottom: 10px;
 }
 
-.formulario input,
-.formulario select {
+.item-card-mobile select {
   width: 100%;
-  padding: 10px;
   font-size: 14px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  transition: border 0.2s;
+  padding: 6px;
 }
 
-.formulario input:focus,
-.formulario select:focus {
-  outline: none;
-  border-color: #1abc9c;
-}
-
-/* Linhas de campos lado a lado */
-.form-row {
+.item-row {
   display: flex;
-  gap: 10px;
+  justify-content: space-between;
   align-items: center;
+  gap: 5px;
 }
 
-.form-row input {
-  flex: 1;
+.item-row input {
+  width: 50px;
+  font-size: 14px;
+  padding: 4px;
 }
 
-.form-row select {
-  flex: 1;
-}
-
-/* Botões do formulário */
-.form-actions {
-  display: flex;
-  gap: 10px;
-}
-
-.form-actions button {
-  padding: 10px 15px;
-  border-radius: 6px;
-  border: none;
+.item-total {
   font-weight: 600;
+  font-size: 14px;
+  min-width: 70px;
+  text-align: right;
+}
+
+.remove-x {
+  background: none;
+  border: none;
+  color: #e74c3c;
+  font-size: 18px;
+  font-weight: bold;
   cursor: pointer;
-  transition: background 0.2s;
 }
 
-.form-actions button[type="submit"] {
-  background-color: #1abc9c;
-  color: white;
+.remove-x:hover {
+  color: #c0392b;
 }
 
-.form-actions button[type="submit"]:hover {
-  background-color: #16a085;
-}
+/* Responsividade Mobile */
+@media (max-width: 480px) {
+  .item-row {
+    flex-wrap: wrap;
+    gap: 5px;
+  }
 
-.form-actions button[type="button"] {
-  background-color: #e74c3c;
-  color: white;
-}
-
-.form-actions button[type="button"]:hover {
-  background-color: #c0392b;
+  .item-total {
+    min-width: auto;
+    flex: 1;
+  }
 }
 </style>
