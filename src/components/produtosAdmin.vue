@@ -1,15 +1,27 @@
 <template>
   <div class="app-container">
-    <h1>Administração de Produtos</h1>
+    <h1>Produtos</h1>
+
+    <!-- ALERTA GLOBAL FIXO -->
+    <div v-if="alerta.mostrar" :class="['alerta-toast', alerta.tipo]">
+      {{ alerta.mensagem }}
+    </div>
 
     <!-- Formulário de produto -->
     <form @submit.prevent="salvarProduto" class="formulario">
+      <!-- Nome do produto -->
       <input
         type="text"
         v-model="produtoForm.nome"
         placeholder="Nome do produto"
         required
       />
+
+      <!-- Categoria -->
+      <select v-model="produtoForm.categoria_id" required>
+        <option value="">Selecione a categoria</option>
+        <option v-for="cat in categorias" :key="cat.id" :value="cat.id">{{ cat.nome }}</option>
+      </select>
 
       <!-- Preço + unidade lado a lado -->
       <div class="form-row">
@@ -38,9 +50,10 @@
         <span>{{ produtoForm.unidade }}</span>
       </div>
 
+      <!-- Botões -->
       <div class="form-actions">
-        <button type="submit">{{ produtoForm.id ? 'Atualizar' : 'Adicionar' }}</button>
-        <button type="button" v-if="produtoForm.id" @click="cancelarEdicao">Cancelar</button>
+        <button type="submit">{{ produtoForm.id ? 'Salvar' : 'Adicionar' }}</button>
+        <button type="button" @click="cancelarEdicao">Cancelar</button>
       </div>
     </form>
   </div>
@@ -56,14 +69,32 @@ export default {
   setup() {
     const route = useRoute()
     const router = useRouter()
+
     const produtoForm = ref({
       id: null,
       nome: '',
+      categoria_id: '',
       preco: 0,
       precoStr: '',
       estoque: 0,
       unidade: 'un'
     })
+
+    const categorias = ref([])
+
+    // Alerta do app
+    const alerta = ref({
+      mostrar: false,
+      mensagem: '',
+      tipo: 'sucesso' // 'sucesso' | 'erro'
+    })
+
+    const mostrarAlerta = (mensagem, tipo = 'sucesso') => {
+      alerta.value = { mostrar: true, mensagem, tipo }
+      setTimeout(() => {
+        alerta.value.mostrar = false
+      }, 2500)
+    }
 
     const carregarProduto = async (id) => {
       const { data, error } = await supabase.from('produtos').select('*').eq('id', id).single()
@@ -75,14 +106,20 @@ export default {
       }
     }
 
+    const carregarCategorias = async () => {
+      const { data, error } = await supabase.from('categorias').select('*').order('nome')
+      if (!error) categorias.value = data
+    }
+
     onMounted(() => {
+      carregarCategorias()
       const id = route.query.id
       if (id) carregarProduto(id)
     })
 
     const salvarProduto = async () => {
       const precoConvertido = parseFloat(produtoForm.value.precoStr.replace(',', '.'))
-      if (isNaN(precoConvertido)) return alert('Preço inválido')
+      if (isNaN(precoConvertido)) return mostrarAlerta('Preço inválido', 'erro')
       produtoForm.value.preco = precoConvertido
 
       try {
@@ -91,38 +128,44 @@ export default {
             .from('produtos')
             .update({
               nome: produtoForm.value.nome,
+              categoria_id: produtoForm.value.categoria_id,
               preco: produtoForm.value.preco,
               estoque: produtoForm.value.estoque,
               unidade: produtoForm.value.unidade
             })
             .eq('id', produtoForm.value.id)
           if (error) throw error
-          alert('Produto atualizado com sucesso!')
+          mostrarAlerta('Produto atualizado com sucesso!', 'sucesso')
         } else {
           const { error } = await supabase
             .from('produtos')
             .insert([{
               nome: produtoForm.value.nome,
+              categoria_id: produtoForm.value.categoria_id,
               preco: produtoForm.value.preco,
               estoque: produtoForm.value.estoque,
               unidade: produtoForm.value.unidade
             }])
           if (error) throw error
-          alert('Produto adicionado com sucesso!')
+          mostrarAlerta('Produto adicionado com sucesso!', 'sucesso')
         }
-        produtoForm.value = { id: null, nome: '', preco: 0, precoStr: '', estoque: 0, unidade: 'un' }
-        router.push('/produtos') // volta para a lista após salvar
+
+        // Reset e redirecionamento após delay
+        setTimeout(() => {
+          produtoForm.value = { id: null, nome: '', categoria_id: '', preco: 0, precoStr: '', estoque: 0, unidade: 'un' }
+          router.push('/produtos/lista')
+        }, 1000)
       } catch (err) {
-        alert('Erro ao salvar produto: ' + err.message)
+        mostrarAlerta('Erro ao salvar produto: ' + err.message, 'erro')
       }
     }
 
     const cancelarEdicao = () => {
-      produtoForm.value = { id: null, nome: '', preco: 0, precoStr: '', estoque: 0, unidade: 'un' }
-      router.push('/produtos') // volta para a lista
+      produtoForm.value = { id: null, nome: '', categoria_id: '', preco: 0, precoStr: '', estoque: 0, unidade: 'un' }
+      router.push('/produtos/lista')
     }
 
-    return { produtoForm, salvarProduto, cancelarEdicao }
+    return { produtoForm, categorias, salvarProduto, cancelarEdicao, alerta, mostrarAlerta }
   }
 }
 </script>
@@ -134,7 +177,7 @@ export default {
   padding: 20px;
 }
 
-/* Formulário padronizado */
+/* Formulário */
 .formulario {
   display: flex;
   flex-direction: column;
@@ -157,7 +200,6 @@ export default {
   border-color: #1abc9c;
 }
 
-/* Linhas de campos lado a lado */
 .form-row {
   display: flex;
   gap: 10px;
@@ -172,7 +214,6 @@ export default {
   width: 120px;
 }
 
-/* Botões do formulário */
 .form-actions {
   display: flex;
   gap: 10px;
@@ -203,5 +244,33 @@ export default {
 
 .form-actions button[type="button"]:hover {
   background-color: #c0392b;
+}
+
+/* ALERTA FIXO TOAST */
+.alerta-toast {
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  color: white;
+  z-index: 9999;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  animation: slide-down 0.3s ease;
+}
+
+.alerta-toast.sucesso {
+  background-color: #1abc9c;
+}
+
+.alerta-toast.erro {
+  background-color: #e74c3c;
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translate(-50%, -20px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
 }
 </style>

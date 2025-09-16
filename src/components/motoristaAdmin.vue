@@ -4,6 +4,11 @@
       <h1>{{ motoristaForm.id ? 'Editar Motorista' : 'Novo Motorista' }}</h1>
     </div>
 
+    <!-- ALERTA TOAST -->
+    <div v-if="alerta.mostrar" :class="['alerta-toast', alerta.tipo]">
+      {{ alerta.mensagem }}
+    </div>
+
     <form @submit.prevent="salvarMotorista" class="formulario">
       <input type="text" v-model="motoristaForm.nome" placeholder="Nome do motorista" required />
       <input type="text" v-model="motoristaForm.cpf" placeholder="CPF" />
@@ -41,6 +46,16 @@ const motoristaForm = ref({
   placa: ''
 })
 
+// ALERTA TOAST
+const alerta = ref({ mostrar: false, mensagem: '', tipo: 'sucesso' })
+
+const mostrarAlerta = (mensagem, tipo = 'sucesso') => {
+  alerta.value = { mostrar: true, mensagem, tipo }
+  setTimeout(() => {
+    alerta.value.mostrar = false
+  }, 2500)
+}
+
 const carregarMotorista = async (id) => {
   const { data, error } = await supabase.from('motoristas').select('*').eq('id', id).single()
   if (!error && data) motoristaForm.value = data
@@ -54,16 +69,17 @@ const salvarMotorista = async () => {
     if (motoristaForm.value.id) {
       const { error } = await supabase.from('motoristas').update(dados).eq('id', motoristaForm.value.id)
       if (error) throw error
-      alert('Motorista atualizado com sucesso!')
+      mostrarAlerta('Motorista atualizado com sucesso!', 'sucesso')
     } else {
       const { data, error } = await supabase.from('motoristas').insert([dados]).select().single()
       if (error) throw error
       motoristaForm.value.id = data.id
-      alert('Motorista cadastrado com sucesso!')
+      mostrarAlerta('Motorista cadastrado com sucesso!', 'sucesso')
     }
-    cancelarEdicao()
+
+    setTimeout(() => cancelarEdicao(), 1000)
   } catch (err) {
-    alert('Erro ao salvar motorista: ' + err.message)
+    mostrarAlerta('Erro ao salvar motorista: ' + err.message, 'erro')
   }
 }
 
@@ -122,10 +138,7 @@ onMounted(() => {
   align-items: center;
 }
 
-.form-row input {
-  flex: 1;
-}
-
+.form-row input,
 .form-row select {
   flex: 1;
 }
@@ -161,5 +174,33 @@ onMounted(() => {
 
 .form-actions button[type="button"]:hover {
   background-color: #c0392b;
+}
+
+/* ALERTA FIXO TOAST */
+.alerta-toast {
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  color: white;
+  z-index: 9999;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  animation: slide-down 0.3s ease;
+}
+
+.alerta-toast.sucesso {
+  background-color: #1abc9c;
+}
+
+.alerta-toast.erro {
+  background-color: #e74c3c;
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translate(-50%, -20px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
 }
 </style>

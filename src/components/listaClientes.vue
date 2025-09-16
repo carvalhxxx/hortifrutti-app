@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="produtos-header">
       <h1>Clientes</h1>
-      <button @click="$router.push({ name: 'clientesForm' })">Novo Cliente</button>
+      <button @click="$router.push({ name: 'clientesForm' })">Inserir</button>
     </div>
 
     <!-- Filtros -->
@@ -36,7 +36,7 @@
         <p v-if="c.cnpj_cpf"><strong>CPF/CNPJ:</strong> {{ c.cnpj_cpf }}</p>
         <p v-if="c.telefone"><strong>Telefone:</strong> {{ c.telefone }}</p>
         <p v-if="c.email"><strong>Email:</strong> {{ c.email }}</p>
-        <p><strong>Status:</strong> {{ c.status }}</p>
+        <p><strong>Status:</strong> {{ formatarStatus(c.status) }}</p>
         <button @click="$router.push({ name: 'clientesForm', params: { id: c.id } })">Editar</button>
       </div>
     </div>
@@ -73,6 +73,12 @@ const clientesFiltrados = computed(() => {
     return ok
   })
 })
+
+// Função para capitalizar status
+const formatarStatus = (status) => {
+  if (!status) return ''
+  return status.charAt(0).toUpperCase() + status.slice(1)
+}
 
 onMounted(() => {
   carregarClientes()

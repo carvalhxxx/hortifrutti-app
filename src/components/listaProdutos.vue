@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="produtos-header">
       <h1>Produtos</h1>
-      <button @click="$router.push('/produtos/form')">Novo Produto</button>
+      <button @click="$router.push('/produtos/form')">Inserir</button>
     </div>
 
     <!-- Filtros -->
@@ -12,6 +12,16 @@
       <div>
         <label>Nome:</label>
         <input type="text" v-model="filtroNome" placeholder="Pesquisar produto..." />
+      </div>
+
+      <div>
+        <label>Categoria:</label>
+        <select v-model="filtroCategoria">
+          <option value="">Todas</option>
+          <option v-for="cat in categorias" :key="cat.id" :value="cat.id">
+            {{ cat.nome.charAt(0).toUpperCase() + cat.nome.slice(1) }}
+          </option>
+        </select>
       </div>
 
       <div>
@@ -47,6 +57,7 @@
         class="card-item"
       >
         <h4>{{ produto.nome.charAt(0).toUpperCase() + produto.nome.slice(1).toLowerCase() }}</h4>
+        <p>Categoria: {{ getNomeCategoria(produto.categoria_id) }}</p>
         <p>Preço: {{ formatarPreco(produto.preco) }}</p>
         <p>Estoque: {{ produto.estoque }}</p>
         <p>Unidade: {{ produto.unidade }}</p>
@@ -67,11 +78,13 @@ export default {
   data() {
     return {
       produtos: [],
+      categorias: [],
       loading: true,
       error: null,
 
       // Filtros
       filtroNome: '',
+      filtroCategoria: '',
       filtroUnidade: '',
       filtroEstoqueMin: null,
       filtroEstoqueMax: null
@@ -79,9 +92,22 @@ export default {
   },
   async created() {
     try {
-      const { data: produtos, error } = await supabase.from('produtos').select('*')
-      if (error) this.error = 'Erro ao buscar produtos: ' + error.message
-      else this.produtos = produtos
+      // Buscar categorias
+      const { data: categorias, error: catError } = await supabase.from('categorias').select('*')
+      if (catError) {
+        this.error = 'Erro ao buscar categorias: ' + catError.message
+        return
+      }
+      this.categorias = categorias
+
+      // Buscar produtos
+      const { data: produtos, error: prodError } = await supabase.from('produtos').select('*')
+      if (prodError) {
+        this.error = 'Erro ao buscar produtos: ' + prodError.message
+      } else {
+        this.produtos = produtos
+      }
+
     } catch (err) {
       this.error = 'Erro inesperado: ' + err.message
     } finally {
@@ -95,6 +121,10 @@ export default {
 
         if (this.filtroNome) {
           ok = ok && prod.nome.toLowerCase().includes(this.filtroNome.toLowerCase())
+        }
+
+        if (this.filtroCategoria) {
+          ok = ok && prod.categoria_id === this.filtroCategoria
         }
 
         if (this.filtroUnidade) {
@@ -117,13 +147,17 @@ export default {
     formatarPreco(valor) {
       if (valor == null) return '0,00'
       return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor)
+    },
+    getNomeCategoria(categoriaId) {
+      const cat = this.categorias.find(c => c.id === categoriaId)
+      if (!cat) return ''
+      return cat.nome.charAt(0).toUpperCase() + cat.nome.slice(1)
     }
   }
 }
 </script>
 
 <style scoped>
-/* Só o header, o resto já vem do global.css */
 .produtos-header {
   display: flex;
   justify-content: space-between;

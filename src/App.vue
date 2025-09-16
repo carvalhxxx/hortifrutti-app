@@ -14,7 +14,6 @@
 
         <h1 class="titulo">Meu Sistema</h1>
 
-        <!-- Removido botão de sair -->
         <div class="acoes"></div>
       </header>
 
@@ -70,6 +69,11 @@
               🗺️ <span>Rotas</span>
             </router-link>
           </li>
+          <li v-if="menuAberto" key="categorias">
+            <router-link to="/categorias" class="menu-link" active-class="ativo">
+              🏷️ <span>Categorias</span>
+            </router-link>
+          </li>
           <li v-if="menuAberto" key="sair">
             <button @click="logout" class="menu-link">
               🔒 <span>Sair</span>
@@ -95,7 +99,9 @@ export default {
   data() {
     return {
       menuAberto: false,
-      logado: false
+      logado: false,
+      touchStartX: 0,
+      touchEndX: 0
     }
   },
   async created() {
@@ -107,10 +113,45 @@ export default {
       if (!this.logado) this.menuAberto = false
     })
   },
+  mounted() {
+    // Swipe apenas no mobile
+    if (window.innerWidth < 768) {
+      window.addEventListener('touchstart', this.handleTouchStart)
+      window.addEventListener('touchmove', this.handleTouchMove)
+      window.addEventListener('touchend', this.handleTouchEnd)
+    }
+  },
+  beforeUnmount() {
+    window.removeEventListener('touchstart', this.handleTouchStart)
+    window.removeEventListener('touchmove', this.handleTouchMove)
+    window.removeEventListener('touchend', this.handleTouchEnd)
+  },
   methods: {
     async logout() {
       await supabase.auth.signOut()
       this.$router.push("/login")
+    },
+
+    handleTouchStart(event) {
+      this.touchStartX = event.changedTouches[0].clientX
+    },
+    handleTouchMove(event) {
+      this.touchEndX = event.changedTouches[0].clientX
+    },
+    handleTouchEnd() {
+      const deltaX = this.touchEndX - this.touchStartX
+      const swipeThreshold = 50
+
+      if (deltaX > swipeThreshold) {
+        // Deslizou para a direita → abre menu
+        this.menuAberto = true
+      } else if (deltaX < -swipeThreshold) {
+        // Deslizou para a esquerda → fecha menu
+        this.menuAberto = false
+      }
+
+      this.touchStartX = 0
+      this.touchEndX = 0
     }
   }
 }
@@ -144,13 +185,9 @@ export default {
   margin: 0;
 }
 
-.app-header .acoes {
-  /* Mantido vazio já que o botão de sair foi removido */
-}
+.app-header .acoes {}
 
-/* =======================
-   Botão hamburguer dentro do header
-======================= */
+/* Botão hamburguer */
 .toggle-btn {
   background: transparent;
   border: none;
@@ -159,18 +196,14 @@ export default {
   cursor: pointer;
 }
 
-/* =======================
-   Container principal
-======================= */
+/* Container principal */
 .container {
   display: flex;
   height: 100vh;
   position: relative;
 }
 
-/* =======================
-   Overlay escuro com fade
-======================= */
+/* Overlay escuro com fade */
 .overlay {
   position: fixed;
   top: 0;
@@ -180,17 +213,10 @@ export default {
   background: rgba(0,0,0,0.5);
   z-index: 1050;
 }
+.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-.fade-enter-from, .fade-leave-to {
-  opacity: 0;
-}
-
-/* =======================
-   Menu lateral deslizante
-======================= */
+/* Menu lateral deslizante */
 .menu-lateral {
   width: 220px;
   background-color: #2c3e50;
@@ -204,21 +230,13 @@ export default {
   transition: transform 0.3s ease;
   z-index: 1100;
 }
+.menu-lateral.aberto { transform: translateX(0); }
 
-.menu-lateral.aberto {
-  transform: translateX(0);
-}
+/* Slide animation */
+.slide-enter-active, .slide-leave-active { transition: all 0.3s ease; }
+.slide-enter-from, .slide-leave-to { transform: translateX(-20px); opacity: 0; }
 
-/* Slide animation para botões/links */
-.slide-enter-active, .slide-leave-active {
-  transition: all 0.3s ease;
-}
-.slide-enter-from, .slide-leave-to {
-  transform: translateX(-20px);
-  opacity: 0;
-}
-
-/* Botão fechar dentro do menu */
+/* Botão fechar */
 .close-btn {
   align-self: flex-end;
   background: transparent;
@@ -230,17 +248,8 @@ export default {
 }
 
 /* Links do menu */
-.menu-lateral ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  flex: 1;
-}
-
-.menu-lateral li {
-  margin-bottom: 15px;
-}
-
+.menu-lateral ul { list-style: none; padding: 0; margin: 0; flex: 1; }
+.menu-lateral li { margin-bottom: 15px; }
 .menu-link {
   display: flex;
   align-items: center;
@@ -252,47 +261,23 @@ export default {
   border-radius: 5px;
   transition: background 0.2s;
 }
+.menu-link span { flex: 1; }
+.menu-link:hover { background-color: #34495e; }
+.menu-link.ativo { background-color: #1abc9c; font-weight: bold; }
 
-.menu-link span {
-  flex: 1;
-}
-
-.menu-link:hover {
-  background-color: #34495e;
-}
-
-.menu-link.ativo {
-  background-color: #1abc9c;
-  font-weight: bold;
-}
-
-/* =======================
-   Conteúdo principal
-======================= */
+/* Conteúdo principal */
 .conteudo {
   flex: 1;
   margin-left: 0;
   padding: 20px;
-  padding-top: 80px; /* espaço para o header fixo */
+  padding-top: 80px;
   transition: margin-left 0.3s ease;
 }
-
-/* Desktop: desloca conteúdo quando menu aberto */
 @media(min-width: 768px) {
-  .conteudo {
-    margin-left: 220px;
-    padding-top: 80px; /* ajustado para header */
-  }
+  .conteudo { margin-left: 220px; padding-top: 80px; }
 }
-
-/* Mobile: menu ocupa 70% da tela */
 @media(max-width: 767px) {
-  .menu-lateral {
-    width: 70%;
-  }
-  .conteudo {
-    margin-left: 0;
-    padding-top: 80px; /* ajustado para header */
-  }
+  .menu-lateral { width: 70%; }
+  .conteudo { margin-left: 0; padding-top: 80px; }
 }
 </style>

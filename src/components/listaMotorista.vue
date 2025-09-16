@@ -7,7 +7,7 @@
         @click="$router.push({ name: 'motoristasForm' })"
         style="padding: 8px 15px; border-radius: 6px; background-color: #1abc9c; color: white; border: none; cursor: pointer;"
       >
-        Novo Motorista
+        Inserir
       </button>
     </div>
 
@@ -34,7 +34,7 @@
         <p><strong>Nome:</strong> {{ m.nome }}</p>
         <p><strong>CPF:</strong> {{ m.cpf }}</p>
         <p><strong>Telefone:</strong> {{ m.telefone }}</p>
-        <p><strong>Status:</strong> {{ m.status }}</p>
+        <p><strong>Status:</strong> {{ formatarStatus(m.status) }}</p>
         <p><strong>Veículo:</strong> {{ m.veiculo }}</p>
         <p><strong>Placa:</strong> {{ m.placa }}</p>
         <button @click="$router.push({ name: 'motoristasForm', params: { id: m.id } })">
@@ -70,6 +70,12 @@ const motoristasFiltrados = computed(() => {
     return ok
   })
 })
+
+// Função para capitalizar status
+const formatarStatus = (status) => {
+  if (!status) return ''
+  return status.charAt(0).toUpperCase() + status.slice(1)
+}
 
 onMounted(() => {
   carregarMotoristas()

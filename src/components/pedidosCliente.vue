@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="produtos-header">
       <h1>Pedidos</h1>
-      <button @click="$router.push({ name: 'pedidosForm' })">Novo Pedido</button>
+      <button @click="$router.push({ name: 'pedidosForm' })">Inserir</button>
     </div>
 
     <!-- Filtros -->

@@ -5,6 +5,11 @@
       <h1>{{ rotaForm.id ? 'Editar Rota' : 'Nova Rota' }}</h1>
     </div>
 
+    <!-- ALERTA TOAST -->
+    <div v-if="alerta.mostrar" :class="['alerta-toast', alerta.tipo]">
+      {{ alerta.mensagem }}
+    </div>
+
     <!-- Formulário -->
     <form @submit.prevent="salvarRota" class="formulario">
       <label>Motorista:</label>
@@ -21,14 +26,14 @@
 
       <label>Status:</label>
       <select v-model="rotaForm.status">
-        <option v-for="s in statusDisponiveis" :key="s" :value="s">{{ s }}</option>
+        <option v-for="(label, key) in statusLabels" :key="key" :value="key">{{ label }}</option>
       </select>
 
       <label>Observações:</label>
       <input type="text" v-model="rotaForm.observacoes" placeholder="Observações" />
 
       <h2>Pedidos</h2>
-      <div v-for="(pedido, index) in rotaForm.pedidos" :key="pedido.id" class="form-row">
+      <div v-for="(pedido, index) in rotaForm.pedidos" :key="pedido.id_pedido" class="form-row">
         <span>{{ obterNomeCliente(pedido.id_pedido) }} - Status: {{ pedido.status_entrega }}</span>
         <button type="button" @click="removerPedido(index)">Remover</button>
       </div>
@@ -38,7 +43,7 @@
         <select v-model="pedidoSelecionado">
           <option value="">Selecione um pedido</option>
           <option v-for="p in pedidosDisponiveis" :key="p.id" :value="p.id">
-            {{ obterNomeCliente(p.id) }} - Total: R$ {{ formatarPreco(p.valor_total) }}
+            {{ obterNomeCliente(p.id) }} - Total: {{ formatarPreco(p.valor_total) }}
           </option>
         </select>
         <button type="button" @click="adicionarPedido">Adicionar</button>
@@ -61,7 +66,6 @@ export default {
     return {
       motoristas: [],
       pedidos: [],
-      statusDisponiveis: ['aberta','em_andamento','finalizada','cancelada'],
       rotaForm: {
         id: null,
         id_motorista: '',
@@ -71,7 +75,14 @@ export default {
         observacoes: '',
         pedidos: []
       },
-      pedidoSelecionado: ''
+      pedidoSelecionado: '',
+      statusLabels: {
+        aberta: 'Aberta',
+        em_andamento: 'Em andamento',
+        finalizada: 'Finalizada',
+        cancelada: 'Cancelada'
+      },
+      alerta: { mostrar: false, mensagem: '', tipo: 'sucesso' }
     }
   },
   async created() {
@@ -86,6 +97,10 @@ export default {
     }
   },
   methods: {
+    mostrarAlerta(mensagem, tipo = 'sucesso') {
+      this.alerta = { mostrar: true, mensagem, tipo }
+      setTimeout(() => { this.alerta.mostrar = false }, 2500)
+    },
     async buscarMotoristas() {
       const { data, error } = await supabase.from('motoristas').select('*').order('nome')
       if (!error) this.motoristas = data
@@ -136,8 +151,19 @@ export default {
       this.rotaForm.pedidos.splice(index, 1)
     },
     async salvarRota() {
-      if (!this.rotaForm.id_motorista) return alert('Selecione um motorista')
-      if (!this.rotaForm.data_saida) return alert('Selecione a data de saída')
+      if (!this.rotaForm.id_motorista) return this.mostrarAlerta('Selecione um motorista', 'erro')
+      if (!this.rotaForm.data_saida) return this.mostrarAlerta('Selecione a data de saída', 'erro')
+
+      let query = supabase.from('rotas')
+        .select('*')
+        .eq('id_motorista', this.rotaForm.id_motorista)
+        .in('status', ['aberta','em_andamento'])
+
+      if (this.rotaForm.id) query = query.neq('id', this.rotaForm.id)
+
+      const { data: rotasAtivas, error: rotasError } = await query
+      if (rotasError) return this.mostrarAlerta('Erro ao verificar rotas: ' + rotasError.message, 'erro')
+      if (rotasAtivas.length > 0) return this.mostrarAlerta('Motorista já possui rota ativa', 'erro')
 
       const rotaData = {
         id_motorista: this.rotaForm.id_motorista,
@@ -147,28 +173,32 @@ export default {
         observacoes: this.rotaForm.observacoes
       }
 
-      if (this.rotaForm.id) {
-        const { error } = await supabase.from('rotas').update(rotaData).eq('id', this.rotaForm.id)
-        if (error) return alert('Erro ao atualizar rota: ' + error.message)
-        await supabase.from('rota_pedidos').delete().eq('id_rota', this.rotaForm.id)
-      } else {
-        const { data, error } = await supabase.from('rotas').insert([rotaData]).select().single()
-        if (error) return alert('Erro ao criar rota: ' + error.message)
-        this.rotaForm.id = data.id
-      }
+      try {
+        if (this.rotaForm.id) {
+          const { error } = await supabase.from('rotas').update(rotaData).eq('id', this.rotaForm.id)
+          if (error) throw error
+          await supabase.from('rota_pedidos').delete().eq('id_rota', this.rotaForm.id)
+        } else {
+          const { data, error } = await supabase.from('rotas').insert([rotaData]).select().single()
+          if (error) throw error
+          this.rotaForm.id = data.id
+        }
 
-      for (let p of this.rotaForm.pedidos) {
-        const { error } = await supabase.from('rota_pedidos').insert([{
-          id_rota: this.rotaForm.id,
-          id_pedido: p.id_pedido,
-          status_entrega: p.status_entrega,
-          data_entrega: p.data_entrega
-        }])
-        if (error) return alert('Erro ao adicionar pedidos à rota: ' + error.message)
-      }
+        for (let p of this.rotaForm.pedidos) {
+          const { error } = await supabase.from('rota_pedidos').insert([{
+            id_rota: this.rotaForm.id,
+            id_pedido: p.id_pedido,
+            status_entrega: p.status_entrega,
+            data_entrega: p.data_entrega
+          }])
+          if (error) throw error
+        }
 
-      alert('Rota salva com sucesso!')
-      this.cancelarEdicao()
+        this.mostrarAlerta('Rota salva com sucesso!', 'sucesso')
+        setTimeout(() => this.cancelarEdicao(), 1000)
+      } catch(err) {
+        this.mostrarAlerta('Erro ao salvar rota: ' + err.message, 'erro')
+      }
     },
     cancelarEdicao() {
       this.rotaForm = {
@@ -193,7 +223,6 @@ export default {
   padding: 20px;
 }
 
-/* Formulário padronizado global */
 .formulario {
   display: flex;
   flex-direction: column;
@@ -210,13 +239,6 @@ export default {
   transition: border 0.2s;
 }
 
-.formulario input:focus,
-.formulario select:focus {
-  outline: none;
-  border-color: #1abc9c;
-}
-
-/* Linhas de campos lado a lado */
 .form-row {
   display: flex;
   gap: 10px;
@@ -228,7 +250,6 @@ export default {
   flex: 1;
 }
 
-/* Botões do formulário */
 .form-actions {
   display: flex;
   gap: 10px;
@@ -255,12 +276,39 @@ export default {
   background-color: #16a085;
 }
 
-/* Botão Cancelar */
 .form-actions button[type="button"] {
   background-color: #e74c3c;
 }
 
 .form-actions button[type="button"]:hover {
   background-color: #c0392b;
+}
+
+/* ALERTA FIXO TOAST */
+.alerta-toast {
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  color: white;
+  z-index: 9999;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  animation: slide-down 0.3s ease;
+}
+
+.alerta-toast.sucesso {
+  background-color: #1abc9c;
+}
+
+.alerta-toast.erro {
+  background-color: #e74c3c;
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translate(-50%, -20px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
 }
 </style>

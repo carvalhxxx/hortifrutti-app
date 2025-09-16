@@ -11,6 +11,8 @@ import loginTela from '../components/loginTela.vue'
 import rotasLista from '../components/rotasLista.vue'
 import rotasForm from '../components/rotasForm.vue'
 import inicioApp from '../components/inicioApp.vue'
+import listaCategorias from '../components/listaCategorias.vue'
+import categoriasAdmin from '../components/categoriasAdmin.vue'
 import { supabase } from '../supabase.js'
 
 const routes = [
@@ -36,6 +38,10 @@ const routes = [
   // Rotas
   { path: '/rotas', component: rotasLista },
   { path: '/rotas/form/:id?', component: rotasForm, name: 'rotasForm' },
+
+  // Categorias
+  { path: '/categorias', component: listaCategorias },
+  { path: '/categorias/form/:id?', component: categoriasAdmin, name: 'categoriasForm' },
 
   // Login
   { path: '/login', component: loginTela }

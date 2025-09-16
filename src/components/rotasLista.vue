@@ -3,7 +3,7 @@
     <!-- Header com título e botão Nova Rota -->
     <div class="produtos-header">
       <h1>Rotas</h1>
-      <button @click="$router.push({ name: 'rotasForm' })">Nova Rota</button>
+      <button @click="$router.push({ name: 'rotasForm' })">Inserir</button>
     </div>
 
     <!-- Filtros -->
@@ -20,7 +20,7 @@
         <label>Status:</label>
         <select v-model="filtroStatus">
           <option value="">Todos</option>
-          <option v-for="s in statusDisponiveis" :key="s" :value="s">{{ s }}</option>
+          <option v-for="s in statusDisponiveis" :key="s" :value="s">{{ statusLabel(s) }}</option>
         </select>
       </div>
     </form>
@@ -29,7 +29,7 @@
     <div class="lista-grid">
       <div v-for="rota in rotasFiltradas" :key="rota.id" class="card-item">
         <p><strong>Motorista:</strong> {{ obterNomeMotorista(rota.id_motorista) }}</p>
-        <p><strong>Status:</strong> {{ rota.status }}</p>
+        <p><strong>Status:</strong> {{ statusLabel(rota.status) }}</p>
         <p><strong>Saída:</strong> {{ formatarData(rota.data_saida) }}</p>
         <p><strong>Chegada:</strong> {{ formatarData(rota.data_chegada) }}</p>
         <button @click="$router.push({ name: 'rotasForm', params: { id: rota.id } })">
@@ -91,10 +91,20 @@ export default {
         hour: '2-digit',
         minute: '2-digit'
       })
+    },
+    statusLabel(status) {
+      const map = {
+        aberta: 'Aberta',
+        em_andamento: 'Em andamento',
+        finalizada: 'Finalizada',
+        cancelada: 'Cancelada'
+      }
+      return map[status] || status
     }
   }
 }
 </script>
+
 
 <style scoped>
 .app-container {
