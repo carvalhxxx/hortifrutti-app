@@ -127,10 +127,21 @@ export default {
     window.removeEventListener('touchend', this.handleTouchEnd)
   },
   methods: {
-    async logout() {
+      async logout() {
+    // Fecha menu e atualiza estado local imediatamente
+    this.menuAberto = false
+    this.logado = false
+
+    // Redireciona para login antes de esperar Supabase
+    this.$router.replace("/login")
+
+    // Encerra sessão Supabase em background
+    try {
       await supabase.auth.signOut()
-      this.$router.push("/login")
-    },
+    } catch (error) {
+      console.error("Erro ao deslogar:", error.message)
+    }
+  },
 
     handleTouchStart(event) {
       this.touchStartX = event.changedTouches[0].clientX

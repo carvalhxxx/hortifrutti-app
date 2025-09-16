@@ -64,12 +64,26 @@ export default {
       filtroClienteNome: '',
       filtroStatus: '',
       filtroDataInicio: '',
-      filtroDataFim: ''
+      filtroDataFim: '',
+
+      intervalId: null // guarda o setInterval para limpar depois
     }
   },
   async created() {
     await this.buscarClientes()
     await this.buscarPedidos()
+
+    // Atualiza pedidos a cada 10 segundos
+    this.intervalId = setInterval(() => {
+      this.buscarPedidos()
+    }, 10000)
+  },
+  beforeUnmount() {
+    // limpa o intervalo quando sair da página
+    if (this.intervalId) {
+      clearInterval(this.intervalId)
+      this.intervalId = null
+    }
   },
   computed: {
     pedidosFiltrados() {

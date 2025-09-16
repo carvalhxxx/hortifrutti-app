@@ -1,5 +1,10 @@
 <template>
   <div class="login-wrapper">
+    <!-- ALERTA TOAST -->
+    <div v-if="alerta.mostrar" :class="['alerta-toast', alerta.tipo]">
+      {{ alerta.mensagem }}
+    </div>
+
     <div class="login-box">
       <h2>{{ modo === 'login' ? 'Login' : 'Cadastro' }}</h2>
 
@@ -15,8 +20,6 @@
           {{ modo === 'login' ? 'Cadastrar' : 'Entrar' }}
         </a>
       </p>
-
-      <p v-if="erro" class="erro">{{ erro }}</p>
     </div>
   </div>
 </template>
@@ -31,15 +34,21 @@ export default {
       username: "",
       senha: "",
       modo: "login",
-      erro: null
+      alerta: { mostrar: false, mensagem: "", tipo: "sucesso" } // TOAST
     }
   },
   methods: {
+    mostrarAlerta(mensagem, tipo = "sucesso") {
+      this.alerta = { mostrar: true, mensagem, tipo }
+      setTimeout(() => {
+        this.alerta.mostrar = false
+      }, 2500)
+    },
+
     async signup() {
-      this.erro = null
       const userNameNormalized = this.username.trim().toLowerCase()
       if (!userNameNormalized || !this.senha) {
-        this.erro = "Preencha todos os campos"
+        this.mostrarAlerta("Preencha todos os campos", "erro")
         return
       }
 
@@ -47,18 +56,18 @@ export default {
         const emailFicticio = `${userNameNormalized}@meusistema.local`
         const { error } = await supabase.auth.signUp({ email: emailFicticio, password: this.senha })
         if (error) throw error
-        alert("Cadastro realizado! Faça login agora.")
+
+        this.mostrarAlerta("Cadastro realizado! Faça login agora.", "sucesso")
         this.modo = "login"
       } catch (err) {
-        this.erro = "Erro ao cadastrar: " + err.message
+        this.mostrarAlerta("Erro ao cadastrar: " + err.message, "erro")
       }
     },
 
     async login() {
-      this.erro = null
       const userNameNormalized = this.username.trim().toLowerCase()
       if (!userNameNormalized || !this.senha) {
-        this.erro = "Preencha todos os campos"
+        this.mostrarAlerta("Preencha todos os campos", "erro")
         return
       }
 
@@ -66,34 +75,31 @@ export default {
         const emailFicticio = `${userNameNormalized}@meusistema.local`
         const { error } = await supabase.auth.signInWithPassword({ email: emailFicticio, password: this.senha })
         if (error) {
-          this.erro = "Usuário ou senha incorretos"
+          this.mostrarAlerta("Usuário ou senha incorretos", "erro")
           return
         }
 
-        alert("Login realizado com sucesso!")
+        this.mostrarAlerta("Login realizado com sucesso!", "sucesso")
         this.$router.push("/produtos")
       } catch (err) {
-        this.erro = "Ocorreu um erro: " + err.message
+        this.mostrarAlerta("Ocorreu um erro: " + err.message, "erro")
       }
     },
 
     alternarModo() {
       this.modo = this.modo === "login" ? "cadastro" : "login"
-      this.erro = null
     }
   }
 }
 </script>
 
 <style scoped>
-/* Garantir que body e html ocupem 100% da tela e removam margens */
 html, body, #app {
   width: 100%;
   height: 100%;
   margin: 0;
 }
 
-/* Wrapper que centraliza vertical e horizontalmente */
 .login-wrapper {
   display: flex;
   justify-content: center;
@@ -103,7 +109,6 @@ html, body, #app {
   background-color: #f5f5f5;
 }
 
-/* Caixa de login */
 .login-box {
   background: white;
   padding: 30px 25px;
@@ -117,7 +122,6 @@ html, body, #app {
   text-align: center;
 }
 
-/* Inputs */
 .login-box input {
   width: 100%;
   padding: 10px;
@@ -131,7 +135,6 @@ html, body, #app {
   border-color: #1abc9c;
 }
 
-/* Botões */
 .login-box button {
   padding: 10px;
   border-radius: 6px;
@@ -146,7 +149,6 @@ html, body, #app {
   background-color: #16a085;
 }
 
-/* Alternar modo */
 .alternar {
   margin-top: 10px;
   font-size: 14px;
@@ -159,9 +161,31 @@ html, body, #app {
   font-weight: bold;
 }
 
-/* Mensagem de erro */
-.erro {
-  color: red;
-  margin-top: 5px;
+/* TOAST */
+.alerta-toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  color: white;
+  z-index: 9999;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  animation: slide-down 0.3s ease;
+}
+
+.alerta-toast.sucesso {
+  background-color: #1abc9c;
+}
+
+.alerta-toast.erro {
+  background-color: #e74c3c;
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translate(-50%, -20px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
 }
 </style>
