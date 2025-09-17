@@ -39,42 +39,17 @@
         </transition>
 
         <transition-group name="slide" tag="ul">
-          <li v-if="menuAberto" key="home">
-            <router-link to="/" class="menu-link" active-class="ativo">
-              🏠 <span>Início</span>
+          <li v-for="item in menuItems" :key="item.name">
+            <router-link 
+              :to="item.route" 
+              class="menu-link" 
+              active-class="ativo"
+              @click="fecharMenu"
+            >
+              {{ item.icon }} <span>{{ item.label }}</span>
             </router-link>
           </li>
-          <li v-if="menuAberto" key="produtos">
-            <router-link to="/produtos/lista" class="menu-link" active-class="ativo">
-              📦 <span>Produtos</span>
-            </router-link>
-          </li>
-          <li v-if="menuAberto" key="pedidos">
-            <router-link to="/pedidos" class="menu-link" active-class="ativo">
-              📝 <span>Pedidos</span>
-            </router-link>
-          </li>
-          <li v-if="menuAberto" key="clientes">
-            <router-link to="/clientes" class="menu-link" active-class="ativo">
-              👤 <span>Clientes</span>
-            </router-link>
-          </li>
-          <li v-if="menuAberto" key="motoristas">
-            <router-link to="/motoristas" class="menu-link" active-class="ativo">
-              🚚 <span>Motoristas</span>
-            </router-link>
-          </li>
-          <li v-if="menuAberto" key="rotas">
-            <router-link to="/rotas" class="menu-link" active-class="ativo">
-              🗺️ <span>Rotas</span>
-            </router-link>
-          </li>
-          <li v-if="menuAberto" key="categorias">
-            <router-link to="/categorias" class="menu-link" active-class="ativo">
-              🏷️ <span>Categorias</span>
-            </router-link>
-          </li>
-          <li v-if="menuAberto" key="sair">
+          <li key="sair">
             <button @click="logout" class="menu-link">
               🔒 <span>Sair</span>
             </button>
@@ -101,7 +76,16 @@ export default {
       menuAberto: false,
       logado: false,
       touchStartX: 0,
-      touchEndX: 0
+      touchEndX: 0,
+      menuItems: [
+        { name: 'home', label: 'Início', route: '/', icon: '🏠' },
+        { name: 'produtos', label: 'Produtos', route: '/produtos/lista', icon: '📦' },
+        { name: 'pedidos', label: 'Pedidos', route: '/pedidos', icon: '📝' },
+        { name: 'clientes', label: 'Clientes', route: '/clientes', icon: '👤' },
+        { name: 'motoristas', label: 'Motoristas', route: '/motoristas', icon: '🚚' },
+        { name: 'rotas', label: 'Rotas', route: '/rotas', icon: '🗺️' },
+        { name: 'categorias', label: 'Categorias', route: '/categorias', icon: '🏷️' },
+      ]
     }
   },
   async created() {
@@ -114,7 +98,6 @@ export default {
     })
   },
   mounted() {
-    // Swipe apenas no mobile
     if (window.innerWidth < 768) {
       window.addEventListener('touchstart', this.handleTouchStart)
       window.addEventListener('touchmove', this.handleTouchMove)
@@ -127,9 +110,19 @@ export default {
     window.removeEventListener('touchend', this.handleTouchEnd)
   },
   methods: {
+    fecharMenu() {
+      this.menuAberto = false
+    },
+
     async logout() {
-      await supabase.auth.signOut()
-      this.$router.push("/login")
+      this.menuAberto = false
+      this.logado = false
+      this.$router.replace("/login")
+      try {
+        await supabase.auth.signOut()
+      } catch (error) {
+        console.error("Erro ao deslogar:", error.message)
+      }
     },
 
     handleTouchStart(event) {
@@ -143,10 +136,8 @@ export default {
       const swipeThreshold = 50
 
       if (deltaX > swipeThreshold) {
-        // Deslizou para a direita → abre menu
         this.menuAberto = true
       } else if (deltaX < -swipeThreshold) {
-        // Deslizou para a esquerda → fecha menu
         this.menuAberto = false
       }
 
@@ -186,8 +177,6 @@ export default {
 }
 
 .app-header .acoes {}
-
-/* Botão hamburguer */
 .toggle-btn {
   background: transparent;
   border: none;
@@ -196,14 +185,12 @@ export default {
   cursor: pointer;
 }
 
-/* Container principal */
 .container {
   display: flex;
   height: 100vh;
   position: relative;
 }
 
-/* Overlay escuro com fade */
 .overlay {
   position: fixed;
   top: 0;
@@ -216,7 +203,6 @@ export default {
 .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 
-/* Menu lateral deslizante */
 .menu-lateral {
   width: 220px;
   background-color: #2c3e50;
@@ -232,11 +218,9 @@ export default {
 }
 .menu-lateral.aberto { transform: translateX(0); }
 
-/* Slide animation */
 .slide-enter-active, .slide-leave-active { transition: all 0.3s ease; }
 .slide-enter-from, .slide-leave-to { transform: translateX(-20px); opacity: 0; }
 
-/* Botão fechar */
 .close-btn {
   align-self: flex-end;
   background: transparent;
@@ -247,7 +231,6 @@ export default {
   margin-bottom: 20px;
 }
 
-/* Links do menu */
 .menu-lateral ul { list-style: none; padding: 0; margin: 0; flex: 1; }
 .menu-lateral li { margin-bottom: 15px; }
 .menu-link {
@@ -265,7 +248,6 @@ export default {
 .menu-link:hover { background-color: #34495e; }
 .menu-link.ativo { background-color: #1abc9c; font-weight: bold; }
 
-/* Conteúdo principal */
 .conteudo {
   flex: 1;
   margin-left: 0;
