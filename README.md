@@ -4,11 +4,11 @@ Aplicação web para gerenciamento e venda de produtos hortifruti.
 Interface simples, responsiva e com suporte a tema claro/escuro, permitindo visualizar, cadastrar e organizar frutas, verduras e legumes de forma prática.
 
 # Demo
-
+<img width="208" height="456" alt="image" src="https://github.com/user-attachments/assets/7288cced-a24a-4a9f-80b5-54993545a6f6" />
 Acesse aqui a demo -> https://hortifrutti-app.vercel.app/login
 loign: admin
 senha: admin2025
-<img width="208" height="456" alt="image" src="https://github.com/user-attachments/assets/7288cced-a24a-4a9f-80b5-54993545a6f6" />
+
 
 # Tecnologias Utilizadas
 
